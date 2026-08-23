@@ -115,23 +115,36 @@ function initApp() {
   };
 
   // Responsive & Controls Setup
+  let renderer = null;
+  let sound = null;
+  let controls = null;
+
+  try {
+    if (window.soundManager) sound = window.soundManager;
+  } catch (e) { console.warn("soundManager warning:", e); }
+
+  try {
+    if (canvas && window.GameRenderer) renderer = new window.GameRenderer(canvas);
+  } catch (e) { console.warn("GameRenderer warning:", e); }
+
+  try {
+    if (canvas && window.ControlsManager) {
+      controls = new window.ControlsManager(canvas, (input) => {
+        localPredictedY = input.targetY;
+        if (isSoloMode && soloSimulator) {
+          soloSimulator.handlePlayerInput(input);
+        } else if (socket && socket.connected && currentRoomCode) {
+          socket.emit('player_input', input);
+        }
+      });
+    }
+  } catch (e) { console.warn("ControlsManager warning:", e); }
+
   const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   const isPortrait = window.innerHeight > window.innerWidth;
   let currentViewMode = isTouchDevice && isPortrait ? 'bottom' : 'landscape';
 
-  const renderer = new window.GameRenderer(canvas);
-  const sound = window.soundManager;
-
-  const controls = new window.ControlsManager(canvas, (input) => {
-    localPredictedY = input.targetY;
-    if (isSoloMode && soloSimulator) {
-      soloSimulator.handlePlayerInput(input);
-    } else if (socket && socket.connected && currentRoomCode) {
-      socket.emit('player_input', input);
-    }
-  });
-
-  if (btnTurbo) {
+  if (btnTurbo && controls) {
     btnTurbo.addEventListener('click', (e) => {
       controls.triggerTurbo();
       e.preventDefault();
@@ -140,8 +153,8 @@ function initApp() {
 
   function applyViewMode(mode) {
     currentViewMode = mode;
-    renderer.setViewMode(mode);
-    controls.setViewMode(mode);
+    if (renderer) renderer.setViewMode(mode);
+    if (controls) controls.setViewMode(mode);
 
     if (flipLabel) {
       if (mode === 'bottom') flipLabel.textContent = 'Bottom View';
@@ -178,19 +191,18 @@ function initApp() {
     return CYBER_NAMES[Math.floor(Math.random() * CYBER_NAMES.length)];
   }
 
-  const savedName = localStorage.getItem('brick_clash_name');
-  if (savedName) {
-    inputPlayerName.value = savedName;
-  } else {
-    inputPlayerName.value = getRandomName();
+  if (inputPlayerName) {
+    let savedName = null;
+    try { savedName = localStorage.getItem('brick_clash_name'); } catch (e) {}
+    inputPlayerName.value = savedName || getRandomName();
+
+    inputPlayerName.addEventListener('change', () => {
+      try { localStorage.setItem('brick_clash_name', inputPlayerName.value.trim()); } catch (e) {}
+    });
   }
 
-  inputPlayerName.addEventListener('change', () => {
-    localStorage.setItem('brick_clash_name', inputPlayerName.value.trim());
-  });
-
   function getPlayerName() {
-    return inputPlayerName.value.trim() || 'Player';
+    return (inputPlayerName && inputPlayerName.value.trim()) || 'Player';
   }
 
   function showScreen(screen) {
@@ -608,8 +620,9 @@ function initApp() {
 
   btnRandomName.addEventListener('click', () => {
     const newName = getRandomName();
-    inputPlayerName.value = newName;
-    localStorage.setItem('brick_clash_name', newName);
+    if (inputPlayerName) inputPlayerName.value = newName;
+    try { localStorage.setItem('brick_clash_name', newName); } catch (e) {}
+    showToast('Callsign: ' + newName);
   });
 
   btnQuickPlay.addEventListener('click', () => {

@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Fix mobile DOM readyState initialization race condition',
+    message: 'Safely guard localStorage and subsystem initializations',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with readyState initialization fix!');
+  console.log('GitHub updated successfully with localStorage & subsystem guards!');
 })();
