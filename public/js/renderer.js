@@ -231,6 +231,7 @@ class GameRenderer {
     this.drawCourt(ctx, isSuddenDeath);
 
     if (gameState) {
+      this.drawCenterBarriers(ctx, gameState.paddles);
       this.drawBricks(ctx, gameState.bricks);
       this.drawPowerupItems(ctx, gameState.powerupItems);
       this.drawPaddles(ctx, gameState.paddles, playerNames, playerSlot);
@@ -302,6 +303,66 @@ class GameRenderer {
     ctx.restore();
   }
 
+  drawCenterBarriers(ctx, paddles) {
+    if (!paddles) return;
+    const p1Barrier = paddles.p1 && paddles.p1.activeEffects && (p1BarrierVal = paddles.p1.activeEffects.barrier) && p1BarrierVal > 0;
+    const p2Barrier = paddles.p2 && paddles.p2.activeEffects && (p2BarrierVal = paddles.p2.activeEffects.barrier) && p2BarrierVal > 0;
+    if (!p1Barrier && !p2Barrier) return;
+
+    ctx.save();
+    const time = Date.now() * 0.006;
+    const sectors = [
+      { y: 0, h: 140 },
+      { y: 560, h: 140 }
+    ];
+
+    sectors.forEach(sec => {
+      if (p1Barrier) {
+        const pulse = (Math.sin(time * 3 + sec.y) + 1) * 0.5;
+        ctx.strokeStyle = `rgba(0, 240, 255, ${0.7 + pulse * 0.3})`;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 18 + pulse * 8;
+        ctx.lineWidth = 5;
+
+        ctx.beginPath();
+        ctx.moveTo(600, sec.y);
+        ctx.lineTo(600, sec.y + sec.h);
+        ctx.stroke();
+
+        ctx.fillStyle = `rgba(0, 240, 255, ${0.6 + pulse * 0.4})`;
+        ctx.font = 'bold 15px Orbitron';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (let py = sec.y + 25; py < sec.y + sec.h; py += 35) {
+          ctx.fillText('►', 614, py);
+        }
+      }
+
+      if (p2Barrier) {
+        const pulse = (Math.sin(time * 3 + sec.y + 1) + 1) * 0.5;
+        ctx.strokeStyle = `rgba(255, 0, 119, ${0.7 + pulse * 0.3})`;
+        ctx.shadowColor = '#ff0077';
+        ctx.shadowBlur = 18 + pulse * 8;
+        ctx.lineWidth = 5;
+
+        ctx.beginPath();
+        ctx.moveTo(600, sec.y);
+        ctx.lineTo(600, sec.y + sec.h);
+        ctx.stroke();
+
+        ctx.fillStyle = `rgba(255, 0, 119, ${0.6 + pulse * 0.4})`;
+        ctx.font = 'bold 15px Orbitron';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (let py = sec.y + 25; py < sec.y + sec.h; py += 35) {
+          ctx.fillText('◄', 586, py);
+        }
+      }
+    });
+
+    ctx.restore();
+  }
+
   drawBricks(ctx, bricks) {
     if (!bricks) return;
     const time = Date.now() * 0.003;
@@ -350,6 +411,7 @@ class GameRenderer {
         else if (b.powerup === 'giant') icon = '📏';
         else if (b.powerup === 'multiball') icon = '🌀';
         else if (b.powerup === 'fireball') icon = '🔥';
+        else if (b.powerup === 'barrier') icon = '🛡️';
         ctx.fillText(icon, b.x + b.w / 2, b.y + b.h / 2);
       }
 
@@ -449,6 +511,12 @@ class GameRenderer {
         ctx.textAlign = 'center';
         const labelX = isP1 ? pX + pW + 35 : pX - 35;
         ctx.fillText(`🎯 GUIDED`, labelX, pY + pH / 2);
+      } else if (effects.barrier > 0) {
+        ctx.fillStyle = '#00f0ff';
+        ctx.font = 'bold 10px Orbitron';
+        ctx.textAlign = 'center';
+        const labelX = isP1 ? pX + pW + 35 : pX - 35;
+        ctx.fillText(`🛡️ DEFENSE ${Math.ceil(effects.barrier)}s`, labelX, pY + pH / 2);
       } else if (effects.giant > 0) {
         ctx.fillStyle = '#00ff88';
         ctx.font = 'bold 10px Orbitron';
@@ -612,6 +680,7 @@ class GameRenderer {
       else if (item.type === 'multiball') icon = '🌀';
       else if (item.type === 'fireball') icon = '🔥';
       else if (item.type === 'giant') icon = '📏';
+      else if (item.type === 'barrier') icon = '🛡️';
 
       ctx.fillText(icon, item.x, item.y);
       ctx.restore();

@@ -566,11 +566,18 @@ function initApp() {
       } else if (ev.type === 'brick_hit') {
         sound.playBrickHit(ev.destroyed, false);
         renderer.addSparkles(ev.x, ev.y, '#00f0ff', ev.destroyed ? 10 : 5);
+      } else if (ev.type === 'barrier_hit') {
+        if (sound.playBarrierBounce) sound.playBarrierBounce();
+        else sound.playWallBounce();
+        const color = ev.slot === 'p1' ? '#00f0ff' : '#ff0077';
+        renderer.addExplosion(ev.x, ev.y, 35, color);
+        renderer.addFloatingText('🛡️ DEFLECTION!', ev.x, ev.y, color, 16);
       } else if (ev.type === 'powerup_collect') {
         sound.playPowerupCollect();
         let name = (ev.powerup || '').toUpperCase();
         if (ev.powerup === 'giant') name = 'PADDLE EXTEND';
         else if (ev.powerup === 'guided') name = 'GUIDED STEERING';
+        else if (ev.powerup === 'barrier') name = 'ONE-WAY DEFENSE';
         renderer.addFloatingText(`+${name}!`, ev.x, ev.y, '#ffd700', 18);
       } else if (ev.type === 'goal_score') {
         sound.playGoalScore();

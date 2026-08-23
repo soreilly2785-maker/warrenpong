@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Disable 7-day browser caching in _headers and add v2.2 cache-busters',
+    message: 'Add fair dual airdrop distribution and 1-Way Center Defense Shield powerup',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with cache-busting headers!');
+  console.log('GitHub updated successfully with Dual Airdrops & 1-Way Defense Shield!');
 })();

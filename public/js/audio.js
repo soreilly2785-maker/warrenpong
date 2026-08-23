@@ -1,4 +1,4 @@
-﻿// Procedural Web Audio API Synthesizer (No external assets required)
+// Procedural Web Audio API Synthesizer (No external assets required)
 class SoundManager {
   constructor() {
     this.ctx = null;
@@ -103,6 +103,11 @@ class SoundManager {
 
   playWallBounce() {
     this.playTone(180, 'sine', 0.08, 0.15, -40);
+  }
+
+  playBarrierBounce() {
+    this.playTone(520, 'sawtooth', 0.12, 0.28, -250);
+    this.playTone(880, 'sine', 0.08, 0.2, 100);
   }
 
   playBrickHit(destroyed = false, isCore = false, combo = 1) {

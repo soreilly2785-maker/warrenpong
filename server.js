@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
@@ -103,10 +103,12 @@ function createBrickLayout() {
       alive: true
     });
 
-    // Col 2: Mid Defense (Power-ups in corners/wings, normal in center)
+    // Col 2: Mid Defense (Balanced powerup distribution across all rows)
     let midPowerup = null;
     if (r === 0) midPowerup = 'giant';
     else if (r === 1) midPowerup = 'guided';
+    else if (r === 2) midPowerup = 'barrier';
+    else if (r === 3) midPowerup = 'barrier';
     else if (r === 4) midPowerup = 'fireball';
     else if (r === 5) midPowerup = 'multiball';
 
@@ -166,6 +168,8 @@ function createBrickLayout() {
     let midPowerup = null;
     if (r === 0) midPowerup = 'giant';
     else if (r === 1) midPowerup = 'guided';
+    else if (r === 2) midPowerup = 'barrier';
+    else if (r === 3) midPowerup = 'barrier';
     else if (r === 4) midPowerup = 'fireball';
     else if (r === 5) midPowerup = 'multiball';
 
@@ -422,27 +426,38 @@ class Room {
   }
 
   spawnRandomAirdrop() {
-    const types = ['giant', 'guided', 'multiball', 'fireball'];
-    const selectedType = types[Math.floor(Math.random() * types.length)];
-    const dir = Math.random() > 0.5 ? 1 : -1;
-    const spawnX = ARENA_WIDTH / 2 + (Math.random() * 200 - 100);
-    const spawnY = 100 + Math.random() * (ARENA_HEIGHT - 200);
+    const types = ['giant', 'guided', 'multiball', 'fireball', 'barrier'];
+    const p1Type = types[Math.floor(Math.random() * types.length)];
+    const p2Type = types[Math.floor(Math.random() * types.length)];
+    const spawnY1 = 120 + Math.random() * (ARENA_HEIGHT - 240);
+    const spawnY2 = 120 + Math.random() * (ARENA_HEIGHT - 240);
+
+    // Dual Fair Balanced Airdrops: Capsule 1 floats to P1 (Left), Capsule 2 floats to P2 (Right)
+    this.game.powerupItems.push({
+      id: `airdrop_${this.nextEntityId++}`,
+      type: p1Type,
+      x: ARENA_WIDTH / 2 - 30,
+      y: spawnY1,
+      vx: -2.2,
+      vy: (Math.random() * 2 - 1) * 0.7,
+      radius: 16
+    });
 
     this.game.powerupItems.push({
       id: `airdrop_${this.nextEntityId++}`,
-      type: selectedType,
-      x: spawnX,
-      y: spawnY,
-      vx: dir * 2.2,
-      vy: (Math.random() * 2 - 1) * 0.8,
+      type: p2Type,
+      x: ARENA_WIDTH / 2 + 30,
+      y: spawnY2,
+      vx: 2.2,
+      vy: (Math.random() * 2 - 1) * 0.7,
       radius: 16
     });
 
     this.game.events.push({
       type: 'airdrop_spawn',
-      x: spawnX,
-      y: spawnY,
-      powerup: selectedType
+      x: ARENA_WIDTH / 2,
+      y: 350,
+      powerup: 'dual'
     });
   }
 
@@ -586,6 +601,37 @@ class Room {
         ball.y = ARENA_HEIGHT - 10 - ball.radius;
         ball.vy = -Math.abs(ball.vy);
         this.game.events.push({ type: 'wall_bounce', x: ball.x, y: ball.y });
+      }
+
+      // Center Line 1-Way Defense Barrier Collision (X = 600, Top 1/5th [0, 140] & Bottom 1/5th [560, 700])
+      const isBarrierSector = (ball.y >= 0 && ball.y <= 140) || (ball.y >= 560 && ball.y <= 700);
+      if (isBarrierSector) {
+        // P1 Barrier: Blocks incoming opponent shots (vx < 0) from crossing into P1's side
+        if (this.game.paddles.p1.activeEffects.barrier > 0 && ball.vx < 0) {
+          if (ball.prevX >= 600 && ball.x <= 600 + ball.radius) {
+            ball.x = 600 + ball.radius;
+            ball.vx = Math.abs(ball.vx) * 1.05;
+            this.game.events.push({
+              type: 'barrier_hit',
+              slot: 'p1',
+              x: 600,
+              y: ball.y
+            });
+          }
+        }
+        // P2 Barrier: Blocks incoming opponent shots (vx > 0) from crossing into P2's side
+        if (this.game.paddles.p2.activeEffects.barrier > 0 && ball.vx > 0) {
+          if (ball.prevX <= 600 && ball.x >= 600 - ball.radius) {
+            ball.x = 600 - ball.radius;
+            ball.vx = -Math.abs(ball.vx) * 1.05;
+            this.game.events.push({
+              type: 'barrier_hit',
+              slot: 'p2',
+              x: 600,
+              y: ball.y
+            });
+          }
+        }
       }
 
       // Continuous Collision Detection for P1 Paddle (X = 180, plane at 196)
@@ -814,6 +860,9 @@ class Room {
           curveDir: 0,
           curvePhase: 0
         });
+        break;
+      case 'barrier':
+        paddle.activeEffects.barrier = 12;
         break;
       case 'giant':
         paddle.activeEffects.giant = 12;
