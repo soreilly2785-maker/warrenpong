@@ -1,4 +1,9 @@
-document.addEventListener('DOMContentLoaded', () => {
+﻿document.addEventListener('DOMContentLoaded', () => {
+  // Global Error Trap
+  window.addEventListener('error', (e) => {
+    console.error('Runtime error:', e.message);
+  });
+
   // DOM Elements
   const screenLobby = document.getElementById('screen-lobby');
   const screenRoom = document.getElementById('screen-room');
@@ -127,12 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   if (btnTurbo) {
-    const trigger = (e) => {
+    btnTurbo.addEventListener('click', (e) => {
       controls.triggerTurbo();
       e.preventDefault();
-    };
-    btnTurbo.addEventListener('click', trigger);
-    btnTurbo.addEventListener('touchstart', trigger, { passive: false });
+    });
   }
 
   function applyViewMode(mode) {
@@ -153,32 +156,80 @@ document.addEventListener('DOMContentLoaded', () => {
 
   applyViewMode(currentViewMode);
 
-  if (btnFlipView) {
-    addTapListener(btnFlipView, () => {
-      if (currentViewMode === 'bottom') applyViewMode('landscape');
-      else if (currentViewMode === 'landscape') applyViewMode('top');
-      else applyViewMode('bottom');
+  window.addEventListener('resize', () => {
+    if (isTouchDevice) {
+      const nowPortrait = window.innerHeight > window.innerWidth;
+      if (nowPortrait && currentViewMode === 'landscape') {
+        applyViewMode('bottom');
+      } else if (!nowPortrait && currentViewMode !== 'landscape') {
+        applyViewMode('landscape');
+      }
+    }
+  });
 
-      const desc = currentViewMode === 'bottom' ? 'Bottom View (Player at Bottom - Control Zone Below)' :
-                   (currentViewMode === 'top' ? 'Top View' : 'Landscape Mode');
-      showToast(desc);
-    });
+  // Cyber Names Generator
+  const CYBER_NAMES = [
+    'NeonStriker', 'CyberAce', 'VoltRunner', 'NovaFlash', 'ApexPulse',
+    'QuantumRider', 'Viper-9', 'LaserByte', 'ShadowCore', 'AeroDrift',
+    'HyperClash', 'TitanShield', 'EchoBlaster', 'ZeroGravity', 'PulseWave'
+  ];
+
+  function getRandomName() {
+    return CYBER_NAMES[Math.floor(Math.random() * CYBER_NAMES.length)];
   }
 
-  addTapListener(btnSound, () => {
-    const isMuted = sound.toggleMute();
-    soundIcon.textContent = isMuted ? '🔇' : '🔊';
-    showToast(isMuted ? 'Sound Muted' : 'Sound Enabled');
+  const savedName = localStorage.getItem('brick_clash_name');
+  if (savedName) {
+    inputPlayerName.value = savedName;
+  } else {
+    inputPlayerName.value = getRandomName();
+  }
+
+  inputPlayerName.addEventListener('change', () => {
+    localStorage.setItem('brick_clash_name', inputPlayerName.value.trim());
   });
 
-  addTapListener(btnFullscreen, () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
+  function getPlayerName() {
+    return inputPlayerName.value.trim() || 'Player';
+  }
+
+  function showScreen(screen) {
+    [screenLobby, screenRoom, screenGame].forEach(s => s.classList.remove('active'));
+    screen.classList.add('active');
+    modalGameOver.classList.add('hidden');
+    modalJoin.classList.add('hidden');
+    modalExit.classList.add('hidden');
+
+    if (screen === screenGame) {
+      renderer.resize();
+      setTimeout(() => renderer.resize(), 50);
+      setTimeout(() => renderer.resize(), 200);
     }
-    setTimeout(() => renderer.resize(), 100);
-  });
+  }
+
+  function showToast(msg) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(100%)';
+      toast.style.transition = 'all 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, 2800);
+  }
+
+  function unlockAudio() {
+    if (sound) {
+      sound.init();
+      sound.resume();
+    }
+  }
+  window.addEventListener('click', unlockAudio, { once: true });
+  window.addEventListener('touchstart', unlockAudio, { once: true });
 
   // --- CONNECT TO DEDICATED BACKEND (RENDER / LOCAL) ---
   function getServerUrl() {
@@ -190,167 +241,175 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function initSocket() {
     if (socket) return;
+    if (typeof io === 'undefined') {
+      setTimeout(initSocket, 300);
+      return;
+    }
 
     const serverUrl = getServerUrl();
     console.log('Connecting to WarrenPong Backend:', serverUrl);
 
-    socket = io(serverUrl, {
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      timeout: 20000
-    });
+    try {
+      socket = io(serverUrl, {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        timeout: 20000
+      });
 
-    socket.on('connect', () => {
-      console.log('✅ Connected to backend! Socket ID:', socket.id);
-    });
+      socket.on('connect', () => {
+        console.log('✅ Connected to backend! Socket ID:', socket.id);
+      });
 
-    socket.on('room_joined', ({ roomCode, slot, isHost }) => {
-      currentRoomCode = roomCode;
-      mySlot = slot;
-      controls.setPlayerSlot(slot);
-      isSoloMode = false;
+      socket.on('room_joined', ({ roomCode, slot, isHost }) => {
+        currentRoomCode = roomCode;
+        mySlot = slot;
+        controls.setPlayerSlot(slot);
+        isSoloMode = false;
 
-      displayRoomCode.textContent = roomCode;
-      showScreen(screenRoom);
-      showToast(`Connected to Room ${roomCode}`);
-      renderLiveQR(roomCode);
-    });
+        displayRoomCode.textContent = roomCode;
+        showScreen(screenRoom);
+        showToast(`Connected to Room ${roomCode}`);
+        renderLiveQR(roomCode);
+      });
 
-    socket.on('join_error', ({ message }) => {
-      joinErrorMsg.textContent = message;
-      joinErrorMsg.classList.remove('hidden');
-      showToast(message);
-    });
+      socket.on('join_error', ({ message }) => {
+        joinErrorMsg.textContent = message;
+        joinErrorMsg.classList.remove('hidden');
+        showToast(message);
+      });
 
-    socket.on('lobby_update', ({ roomCode, players, isHost }) => {
-      const pList = Object.values(players || {});
-      const p1 = pList.find(p => p.slot === 'p1');
-      const p2 = pList.find(p => p.slot === 'p2');
-
-      if (p1) {
-        playerNames.p1 = p1.name;
-        p1SlotName.textContent = p1.name;
-        p1SlotStatus.textContent = 'READY (HOST)';
-        p1SlotStatus.className = 'slot-status ready';
-      } else {
-        p1SlotName.textContent = 'Waiting...';
-        p1SlotStatus.textContent = 'WAITING';
-        p1SlotStatus.className = 'slot-status waiting';
-      }
-
-      if (p2) {
-        playerNames.p2 = p2.name;
-        p2SlotName.textContent = p2.name;
-        p2SlotStatus.textContent = 'READY';
-        p2SlotStatus.className = 'slot-status ready';
-        roomStatusText.textContent = 'Challenger connected! Match starting...';
-      } else {
-        p2SlotName.textContent = 'Searching for challenger...';
-        p2SlotStatus.textContent = 'WAITING';
-        p2SlotStatus.className = 'slot-status waiting';
-        roomStatusText.textContent = 'Share room code or scan QR code to invite a friend!';
-      }
-    });
-
-    socket.on('game_countdown', ({ count }) => {
-      showScreen(screenGame);
-      countdownOverlay.classList.remove('hidden');
-      countdownNumber.textContent = count > 0 ? count : 'CLASH!';
-      sound.playCountdown(count);
-    });
-
-    socket.on('game_start', ({ players, bricks }) => {
-      countdownOverlay.classList.add('hidden');
-      if (players) {
-        const pList = Object.values(players);
+      socket.on('lobby_update', ({ roomCode, players, isHost }) => {
+        const pList = Object.values(players || {});
         const p1 = pList.find(p => p.slot === 'p1');
         const p2 = pList.find(p => p.slot === 'p2');
-        if (p1) playerNames.p1 = p1.name;
-        if (p2) playerNames.p2 = p2.name;
-      }
-      if (bricks) {
-        clientBricks = bricks;
-        activeGameState.bricks = bricks;
-      }
-      startCentralRenderLoop();
-    });
 
-    socket.on('brick_update', ({ id, hp, alive }) => {
-      const b = clientBricks.find(brick => brick.id === id);
-      if (b) {
-        b.hp = hp;
-        b.alive = alive;
-      }
-    });
+        if (p1) {
+          playerNames.p1 = p1.name;
+          p1SlotName.textContent = p1.name;
+          p1SlotStatus.textContent = 'READY (HOST)';
+          p1SlotStatus.className = 'slot-status ready';
+        } else {
+          p1SlotName.textContent = 'Waiting...';
+          p1SlotStatus.textContent = 'WAITING';
+          p1SlotStatus.className = 'slot-status waiting';
+        }
 
-    socket.on('game_tick', (delta) => {
-      if (!isGameLoopRunning && !isSoloMode) {
+        if (p2) {
+          playerNames.p2 = p2.name;
+          p2SlotName.textContent = p2.name;
+          p2SlotStatus.textContent = 'READY';
+          p2SlotStatus.className = 'slot-status ready';
+          roomStatusText.textContent = 'Challenger connected! Match starting...';
+        } else {
+          p2SlotName.textContent = 'Searching for challenger...';
+          p2SlotStatus.textContent = 'WAITING';
+          p2SlotStatus.className = 'slot-status waiting';
+          roomStatusText.textContent = 'Share room code or scan QR code to invite a friend!';
+        }
+      });
+
+      socket.on('game_countdown', ({ count }) => {
+        showScreen(screenGame);
+        countdownOverlay.classList.remove('hidden');
+        countdownNumber.textContent = count > 0 ? count : 'CLASH!';
+        sound.playCountdown(count);
+      });
+
+      socket.on('game_start', ({ players, bricks }) => {
+        countdownOverlay.classList.add('hidden');
+        if (players) {
+          const pList = Object.values(players);
+          const p1 = pList.find(p => p.slot === 'p1');
+          const p2 = pList.find(p => p.slot === 'p2');
+          if (p1) playerNames.p1 = p1.name;
+          if (p2) playerNames.p2 = p2.name;
+        }
+        if (bricks) {
+          clientBricks = bricks;
+          activeGameState.bricks = bricks;
+        }
         startCentralRenderLoop();
-      }
+      });
 
-      activeGameState.timeRemaining = delta.t;
-      activeGameState.isSuddenDeath = delta.sd;
+      socket.on('brick_update', ({ id, hp, alive }) => {
+        const b = clientBricks.find(brick => brick.id === id);
+        if (b) {
+          b.hp = hp;
+          b.alive = alive;
+        }
+      });
 
-      // Paddle 1
-      if (delta.p1) {
-        activeGameState.paddles.p1.y = (mySlot === 'p1') ? localPredictedY : delta.p1[0];
-        activeGameState.paddles.p1.height = delta.p1[1];
-        activeGameState.paddles.p1.score = delta.p1[2];
-        activeGameState.paddles.p1.combo = delta.p1[3];
-        activeGameState.paddles.p1.activeEffects = delta.p1[4] || {};
-        activeGameState.paddles.p1.charge = delta.p1[5] !== undefined ? delta.p1[5] : 0;
-        activeGameState.paddles.p1.turboTimer = delta.p1[6] !== undefined ? delta.p1[6] : 0;
-      }
+      socket.on('game_tick', (delta) => {
+        if (!isGameLoopRunning && !isSoloMode) {
+          startCentralRenderLoop();
+        }
 
-      // Paddle 2
-      if (delta.p2) {
-        activeGameState.paddles.p2.y = (mySlot === 'p2') ? localPredictedY : delta.p2[0];
-        activeGameState.paddles.p2.height = delta.p2[1];
-        activeGameState.paddles.p2.score = delta.p2[2];
-        activeGameState.paddles.p2.combo = delta.p2[3];
-        activeGameState.paddles.p2.activeEffects = delta.p2[4] || {};
-        activeGameState.paddles.p2.charge = delta.p2[5] !== undefined ? delta.p2[5] : 0;
-        activeGameState.paddles.p2.turboTimer = delta.p2[6] !== undefined ? delta.p2[6] : 0;
-      }
+        activeGameState.timeRemaining = delta.t;
+        activeGameState.isSuddenDeath = delta.sd;
 
-      // Balls
-      activeGameState.balls = (delta.b || []).map(b => ({
-        id: b[0],
-        x: b[1],
-        y: b[2],
-        vx: b[3],
-        vy: b[4],
-        radius: 10,
-        type: b[5],
-        lastHitter: b[6],
-        isTurbo: b[7] === 1
-      }));
+        // Paddle 1
+        if (delta.p1) {
+          activeGameState.paddles.p1.y = (mySlot === 'p1') ? localPredictedY : delta.p1[0];
+          activeGameState.paddles.p1.height = delta.p1[1];
+          activeGameState.paddles.p1.score = delta.p1[2];
+          activeGameState.paddles.p1.combo = delta.p1[3];
+          activeGameState.paddles.p1.activeEffects = delta.p1[4] || {};
+          activeGameState.paddles.p1.charge = delta.p1[5] !== undefined ? delta.p1[5] : 0;
+          activeGameState.paddles.p1.turboTimer = delta.p1[6] !== undefined ? delta.p1[6] : 0;
+        }
 
-      // Powerups
-      activeGameState.powerupItems = (delta.pw || []).map(pw => ({
-        id: pw[0],
-        type: pw[1],
-        x: pw[2],
-        y: pw[3],
-        vx: pw[4],
-        vy: pw[5],
-        radius: 16
-      }));
+        // Paddle 2
+        if (delta.p2) {
+          activeGameState.paddles.p2.y = (mySlot === 'p2') ? localPredictedY : delta.p2[0];
+          activeGameState.paddles.p2.height = delta.p2[1];
+          activeGameState.paddles.p2.score = delta.p2[2];
+          activeGameState.paddles.p2.combo = delta.p2[3];
+          activeGameState.paddles.p2.activeEffects = delta.p2[4] || {};
+          activeGameState.paddles.p2.charge = delta.p2[5] !== undefined ? delta.p2[5] : 0;
+          activeGameState.paddles.p2.turboTimer = delta.p2[6] !== undefined ? delta.p2[6] : 0;
+        }
 
-      processGameEvents(delta.ev || []);
-    });
+        // Balls
+        activeGameState.balls = (delta.b || []).map(b => ({
+          id: b[0],
+          x: b[1],
+          y: b[2],
+          vx: b[3],
+          vy: b[4],
+          radius: 10,
+          type: b[5],
+          lastHitter: b[6],
+          isTurbo: b[7] === 1
+        }));
 
-    socket.on('game_over', (summary) => {
-      stopCentralRenderLoop();
-      showGameOverModal(summary);
-    });
+        // Powerups
+        activeGameState.powerupItems = (delta.pw || []).map(pw => ({
+          id: pw[0],
+          type: pw[1],
+          x: pw[2],
+          y: pw[3],
+          vx: pw[4],
+          vy: pw[5],
+          radius: 16
+        }));
 
-    socket.on('opponent_left', ({ message }) => {
-      showToast(message || 'Opponent left the match.');
-      rematchBtnText.textContent = 'Opponent Left Room';
-    });
+        processGameEvents(delta.ev || []);
+      });
+
+      socket.on('game_over', (summary) => {
+        stopCentralRenderLoop();
+        showGameOverModal(summary);
+      });
+
+      socket.on('opponent_left', ({ message }) => {
+        showToast(message || 'Opponent left the match.');
+        rematchBtnText.textContent = 'Opponent Left Room';
+      });
+    } catch (e) {
+      console.error('Socket init error:', e);
+    }
   }
 
   initSocket();
@@ -368,7 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
       lastFrameTime = now;
 
       if (!isSoloMode && activeGameState) {
-        // Smooth local extrapolation between server delta ticks
         if (activeGameState.balls) {
           activeGameState.balls.forEach(b => {
             b.x += (b.vx || 0) * (dt * 45);
@@ -376,12 +434,10 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
 
-        // Instant 0ms local paddle prediction for your own paddle
         if (activeGameState.paddles && activeGameState.paddles[mySlot]) {
           activeGameState.paddles[mySlot].y = localPredictedY;
         }
 
-        // Throttle DOM HUD to 4Hz
         if (now - lastHudUpdateTime >= 250) {
           lastHudUpdateTime = now;
           updateHUD(activeGameState);
@@ -413,14 +469,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (window.QRCode) {
-      new QRCode(lanQrCanvas, {
-        text: shareUrl,
-        width: 180,
-        height: 180,
-        colorDark: '#00f0ff',
-        colorLight: '#0a0d1a',
-        correctLevel: QRCode.CorrectLevel.M
-      });
+      try {
+        new QRCode(lanQrCanvas, {
+          text: shareUrl,
+          width: 180,
+          height: 180,
+          colorDark: '#00f0ff',
+          colorLight: '#0a0d1a',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } catch (e) {}
     }
   }
 
@@ -455,7 +513,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     hudTimer.textContent = formatTime(state.timeRemaining);
 
-    // Turbo Badges
     const myPaddle = state.paddles[mySlot] || state.paddles.p1;
     const turboSec = (myPaddle && myPaddle.turboTimer) || 0;
     const charge = (myPaddle && myPaddle.charge) || 0;
@@ -547,9 +604,16 @@ document.addEventListener('DOMContentLoaded', () => {
     rematchBtnText.textContent = 'VOTE REMATCH';
   }
 
-  // --- LOBBY BUTTONS ---
+  // --- BUTTON CLICKS (COMPATIBLE ACROSS ALL BROWSERS) ---
 
-  addTapListener(btnQuickPlay, () => {
+  btnRandomName.addEventListener('click', () => {
+    const newName = getRandomName();
+    inputPlayerName.value = newName;
+    localStorage.setItem('brick_clash_name', newName);
+  });
+
+  btnQuickPlay.addEventListener('click', () => {
+    unlockAudio();
     showToast('Searching for online challenger...');
     p1SlotName.textContent = getPlayerName();
     p1SlotStatus.textContent = 'READY';
@@ -562,16 +626,19 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen(screenRoom);
 
     const send = () => {
-      socket.emit('quick_match', { playerName: getPlayerName() });
+      if (socket && socket.connected) {
+        socket.emit('quick_match', { playerName: getPlayerName() });
+      } else if (socket) {
+        socket.once('connect', () => {
+          socket.emit('quick_match', { playerName: getPlayerName() });
+        });
+      }
     };
-    if (socket && socket.connected) {
-      send();
-    } else if (socket) {
-      socket.once('connect', send);
-    }
+    send();
   });
 
-  addTapListener(btnCreateRoom, () => {
+  btnCreateRoom.addEventListener('click', () => {
+    unlockAudio();
     showToast('Creating private room...');
     p1SlotName.textContent = getPlayerName();
     p1SlotStatus.textContent = 'READY (HOST)';
@@ -584,33 +651,36 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen(screenRoom);
 
     const send = () => {
-      socket.emit('create_room', { playerName: getPlayerName(), customCode: null });
+      if (socket && socket.connected) {
+        socket.emit('create_room', { playerName: getPlayerName(), customCode: null });
+      } else if (socket) {
+        socket.once('connect', () => {
+          socket.emit('create_room', { playerName: getPlayerName(), customCode: null });
+        });
+      }
     };
-    if (socket && socket.connected) {
-      send();
-    } else if (socket) {
-      socket.once('connect', send);
-    }
+    send();
   });
 
-  addTapListener(btnJoinModal, () => {
+  btnJoinModal.addEventListener('click', () => {
     modalJoin.classList.remove('hidden');
     inputJoinCode.value = '';
     joinErrorMsg.classList.add('hidden');
     inputJoinCode.focus();
   });
 
-  addTapListener(btnCloseJoin, () => {
+  btnCloseJoin.addEventListener('click', () => {
     modalJoin.classList.add('hidden');
   });
 
-  addTapListener(btnConfirmJoin, () => {
+  btnConfirmJoin.addEventListener('click', () => {
     const code = inputJoinCode.value.toUpperCase().trim();
     if (code.length < 3) {
       joinErrorMsg.textContent = 'Please enter a valid room code';
       joinErrorMsg.classList.remove('hidden');
       return;
     }
+    unlockAudio();
     modalJoin.classList.add('hidden');
     p1SlotName.textContent = 'Room Host';
     p1SlotStatus.textContent = 'READY';
@@ -623,13 +693,15 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen(screenRoom);
 
     const send = () => {
-      socket.emit('join_room', { roomCode: code, playerName: getPlayerName() });
+      if (socket && socket.connected) {
+        socket.emit('join_room', { roomCode: code, playerName: getPlayerName() });
+      } else if (socket) {
+        socket.once('connect', () => {
+          socket.emit('join_room', { roomCode: code, playerName: getPlayerName() });
+        });
+      }
     };
-    if (socket && socket.connected) {
-      send();
-    } else if (socket) {
-      socket.once('connect', send);
-    }
+    send();
   });
 
   inputJoinCode.addEventListener('keydown', (e) => {
@@ -639,7 +711,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Solo AI Game
-  addTapListener(btnSoloAI, () => {
+  btnSoloAI.addEventListener('click', () => {
+    unlockAudio();
     isSoloMode = true;
     mySlot = 'p1';
     controls.setPlayerSlot('p1');
@@ -678,26 +751,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000);
   });
 
+  // Header buttons
+  if (btnFlipView) {
+    btnFlipView.addEventListener('click', () => {
+      if (currentViewMode === 'bottom') applyViewMode('landscape');
+      else if (currentViewMode === 'landscape') applyViewMode('top');
+      else applyViewMode('bottom');
+
+      const desc = currentViewMode === 'bottom' ? 'Bottom View (Player at Bottom - Control Zone Below)' :
+                   (currentViewMode === 'top' ? 'Top View' : 'Landscape Mode');
+      showToast(desc);
+    });
+  }
+
+  btnSound.addEventListener('click', () => {
+    const isMuted = sound.toggleMute();
+    soundIcon.textContent = isMuted ? '🔇' : '🔊';
+    showToast(isMuted ? 'Sound Muted' : 'Sound Enabled');
+  });
+
+  btnFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+    setTimeout(() => renderer.resize(), 100);
+  });
+
   // Share & QR Modal
-  addTapListener(btnLanInfo, () => {
+  btnLanInfo.addEventListener('click', () => {
     renderLiveQR(currentRoomCode);
     modalLan.classList.remove('hidden');
   });
 
-  addTapListener(btnShowRoomQr, () => {
+  btnShowRoomQr.addEventListener('click', () => {
     renderLiveQR(currentRoomCode);
     modalLan.classList.remove('hidden');
   });
 
-  addTapListener(btnCloseLan, () => {
+  btnCloseLan.addEventListener('click', () => {
     modalLan.classList.add('hidden');
   });
 
-  addTapListener(btnDoneLan, () => {
+  btnDoneLan.addEventListener('click', () => {
     modalLan.classList.add('hidden');
   });
 
-  addTapListener(btnCopyLanUrl, () => {
+  btnCopyLanUrl.addEventListener('click', () => {
     const url = lanUrlText.textContent;
     navigator.clipboard.writeText(url).then(() => {
       showToast('Link copied to clipboard!');
@@ -706,7 +807,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  addTapListener(btnCopyCode, () => {
+  btnCopyCode.addEventListener('click', () => {
     if (currentRoomCode) {
       navigator.clipboard.writeText(currentRoomCode).then(() => {
         showToast(`Room code ${currentRoomCode} copied!`);
@@ -714,25 +815,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  addTapListener(btnLeaveRoom, () => {
+  btnLeaveRoom.addEventListener('click', () => {
     if (socket) socket.emit('leave_room');
     currentRoomCode = null;
     showScreen(screenLobby);
   });
 
-  addTapListener(btnInGameExit, () => {
+  btnInGameExit.addEventListener('click', () => {
     modalExit.classList.remove('hidden');
   });
 
-  addTapListener(btnCloseExit, () => {
+  btnCloseExit.addEventListener('click', () => {
     modalExit.classList.add('hidden');
   });
 
-  addTapListener(btnCancelExit, () => {
+  btnCancelExit.addEventListener('click', () => {
     modalExit.classList.add('hidden');
   });
 
-  addTapListener(btnConfirmExit, () => {
+  btnConfirmExit.addEventListener('click', () => {
     modalExit.classList.add('hidden');
     stopCentralRenderLoop();
     if (isSoloMode && soloSimulator) {
@@ -743,7 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen(screenLobby);
   });
 
-  addTapListener(btnRematch, () => {
+  btnRematch.addEventListener('click', () => {
     if (isSoloMode) {
       modalGameOver.classList.add('hidden');
       btnSoloAI.click();
@@ -753,7 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  addTapListener(btnReturnLobby, () => {
+  btnReturnLobby.addEventListener('click', () => {
     modalGameOver.classList.add('hidden');
     stopCentralRenderLoop();
     if (isSoloMode && soloSimulator) {

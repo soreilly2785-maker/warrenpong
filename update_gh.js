@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Enable 0ms responsive touch and click handlers on all mobile devices',
+    message: 'Bundle local socket.io and qrcode scripts (0 external CDN deps)',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with mobile touch fixes!');
+  console.log('GitHub updated successfully with 100% local vendor scripts!');
 })();
