@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const screenLobby = document.getElementById('screen-lobby');
   const screenRoom = document.getElementById('screen-room');
@@ -154,7 +154,7 @@
   applyViewMode(currentViewMode);
 
   if (btnFlipView) {
-    btnFlipView.addEventListener('click', () => {
+    addTapListener(btnFlipView, () => {
       if (currentViewMode === 'bottom') applyViewMode('landscape');
       else if (currentViewMode === 'landscape') applyViewMode('top');
       else applyViewMode('bottom');
@@ -165,91 +165,13 @@
     });
   }
 
-  window.addEventListener('resize', () => {
-    if (isTouchDevice) {
-      const nowPortrait = window.innerHeight > window.innerWidth;
-      if (nowPortrait && currentViewMode === 'landscape') {
-        applyViewMode('bottom');
-      } else if (!nowPortrait && currentViewMode !== 'landscape') {
-        applyViewMode('landscape');
-      }
-    }
-  });
-
-  // Cyber Names Generator
-  const CYBER_NAMES = [
-    'NeonStriker', 'CyberAce', 'VoltRunner', 'NovaFlash', 'ApexPulse',
-    'QuantumRider', 'Viper-9', 'LaserByte', 'ShadowCore', 'AeroDrift',
-    'HyperClash', 'TitanShield', 'EchoBlaster', 'ZeroGravity', 'PulseWave'
-  ];
-
-  function getRandomName() {
-    return CYBER_NAMES[Math.floor(Math.random() * CYBER_NAMES.length)];
-  }
-
-  const savedName = localStorage.getItem('brick_clash_name');
-  if (savedName) {
-    inputPlayerName.value = savedName;
-  } else {
-    inputPlayerName.value = getRandomName();
-  }
-
-  inputPlayerName.addEventListener('change', () => {
-    localStorage.setItem('brick_clash_name', inputPlayerName.value.trim());
-  });
-
-  btnRandomName.addEventListener('click', () => {
-    const newName = getRandomName();
-    inputPlayerName.value = newName;
-    localStorage.setItem('brick_clash_name', newName);
-  });
-
-  function getPlayerName() {
-    return inputPlayerName.value.trim() || 'Player';
-  }
-
-  function showScreen(screen) {
-    [screenLobby, screenRoom, screenGame].forEach(s => s.classList.remove('active'));
-    screen.classList.add('active');
-    modalGameOver.classList.add('hidden');
-    modalJoin.classList.add('hidden');
-    modalExit.classList.add('hidden');
-
-    if (screen === screenGame) {
-      renderer.resize();
-      setTimeout(() => renderer.resize(), 50);
-      setTimeout(() => renderer.resize(), 200);
-    }
-  }
-
-  function showToast(msg) {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = msg;
-    container.appendChild(toast);
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateX(100%)';
-      toast.style.transition = 'all 0.3s ease';
-      setTimeout(() => toast.remove(), 300);
-    }, 2800);
-  }
-
-  function unlockAudio() {
-    sound.init();
-    sound.resume();
-  }
-  window.addEventListener('click', unlockAudio, { once: true });
-  window.addEventListener('touchstart', unlockAudio, { once: true });
-
-  btnSound.addEventListener('click', () => {
+  addTapListener(btnSound, () => {
     const isMuted = sound.toggleMute();
     soundIcon.textContent = isMuted ? '🔇' : '🔊';
     showToast(isMuted ? 'Sound Muted' : 'Sound Enabled');
   });
 
-  btnFullscreen.addEventListener('click', () => {
+  addTapListener(btnFullscreen, () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     } else {
@@ -627,8 +549,7 @@
 
   // --- LOBBY BUTTONS ---
 
-  btnQuickPlay.addEventListener('click', () => {
-    unlockAudio();
+  addTapListener(btnQuickPlay, () => {
     showToast('Searching for online challenger...');
     p1SlotName.textContent = getPlayerName();
     p1SlotStatus.textContent = 'READY';
@@ -650,8 +571,7 @@
     }
   });
 
-  btnCreateRoom.addEventListener('click', () => {
-    unlockAudio();
+  addTapListener(btnCreateRoom, () => {
     showToast('Creating private room...');
     p1SlotName.textContent = getPlayerName();
     p1SlotStatus.textContent = 'READY (HOST)';
@@ -673,25 +593,24 @@
     }
   });
 
-  btnJoinModal.addEventListener('click', () => {
+  addTapListener(btnJoinModal, () => {
     modalJoin.classList.remove('hidden');
     inputJoinCode.value = '';
     joinErrorMsg.classList.add('hidden');
     inputJoinCode.focus();
   });
 
-  btnCloseJoin.addEventListener('click', () => {
+  addTapListener(btnCloseJoin, () => {
     modalJoin.classList.add('hidden');
   });
 
-  btnConfirmJoin.addEventListener('click', () => {
+  addTapListener(btnConfirmJoin, () => {
     const code = inputJoinCode.value.toUpperCase().trim();
     if (code.length < 3) {
       joinErrorMsg.textContent = 'Please enter a valid room code';
       joinErrorMsg.classList.remove('hidden');
       return;
     }
-    unlockAudio();
     modalJoin.classList.add('hidden');
     p1SlotName.textContent = 'Room Host';
     p1SlotStatus.textContent = 'READY';
@@ -720,8 +639,7 @@
   });
 
   // Solo AI Game
-  btnSoloAI.addEventListener('click', () => {
-    unlockAudio();
+  addTapListener(btnSoloAI, () => {
     isSoloMode = true;
     mySlot = 'p1';
     controls.setPlayerSlot('p1');
@@ -761,25 +679,25 @@
   });
 
   // Share & QR Modal
-  btnLanInfo.addEventListener('click', () => {
+  addTapListener(btnLanInfo, () => {
     renderLiveQR(currentRoomCode);
     modalLan.classList.remove('hidden');
   });
 
-  btnShowRoomQr.addEventListener('click', () => {
+  addTapListener(btnShowRoomQr, () => {
     renderLiveQR(currentRoomCode);
     modalLan.classList.remove('hidden');
   });
 
-  btnCloseLan.addEventListener('click', () => {
+  addTapListener(btnCloseLan, () => {
     modalLan.classList.add('hidden');
   });
 
-  btnDoneLan.addEventListener('click', () => {
+  addTapListener(btnDoneLan, () => {
     modalLan.classList.add('hidden');
   });
 
-  btnCopyLanUrl.addEventListener('click', () => {
+  addTapListener(btnCopyLanUrl, () => {
     const url = lanUrlText.textContent;
     navigator.clipboard.writeText(url).then(() => {
       showToast('Link copied to clipboard!');
@@ -788,7 +706,7 @@
     });
   });
 
-  btnCopyCode.addEventListener('click', () => {
+  addTapListener(btnCopyCode, () => {
     if (currentRoomCode) {
       navigator.clipboard.writeText(currentRoomCode).then(() => {
         showToast(`Room code ${currentRoomCode} copied!`);
@@ -796,25 +714,25 @@
     }
   });
 
-  btnLeaveRoom.addEventListener('click', () => {
+  addTapListener(btnLeaveRoom, () => {
     if (socket) socket.emit('leave_room');
     currentRoomCode = null;
     showScreen(screenLobby);
   });
 
-  btnInGameExit.addEventListener('click', () => {
+  addTapListener(btnInGameExit, () => {
     modalExit.classList.remove('hidden');
   });
 
-  btnCloseExit.addEventListener('click', () => {
+  addTapListener(btnCloseExit, () => {
     modalExit.classList.add('hidden');
   });
 
-  btnCancelExit.addEventListener('click', () => {
+  addTapListener(btnCancelExit, () => {
     modalExit.classList.add('hidden');
   });
 
-  btnConfirmExit.addEventListener('click', () => {
+  addTapListener(btnConfirmExit, () => {
     modalExit.classList.add('hidden');
     stopCentralRenderLoop();
     if (isSoloMode && soloSimulator) {
@@ -825,7 +743,7 @@
     showScreen(screenLobby);
   });
 
-  btnRematch.addEventListener('click', () => {
+  addTapListener(btnRematch, () => {
     if (isSoloMode) {
       modalGameOver.classList.add('hidden');
       btnSoloAI.click();
@@ -835,7 +753,7 @@
     }
   });
 
-  btnReturnLobby.addEventListener('click', () => {
+  addTapListener(btnReturnLobby, () => {
     modalGameOver.classList.add('hidden');
     stopCentralRenderLoop();
     if (isSoloMode && soloSimulator) {

@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Restore original UI layout and direct Socket.io networking',
+    message: 'Enable 0ms responsive touch and click handlers on all mobile devices',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with original UI!');
+  console.log('GitHub updated successfully with mobile touch fixes!');
 })();
