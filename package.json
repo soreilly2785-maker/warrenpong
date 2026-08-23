@@ -1,0 +1,17 @@
+{
+  "name": "brick-clash",
+  "version": "1.0.0",
+  "description": "Cross-platform LAN multiplayer Pong + Brick Defense arcade game",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.3"
+  }
+}
