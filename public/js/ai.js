@@ -142,16 +142,32 @@ class LocalGameSimulator {
     this.initGame();
     this.isRunning = true;
 
-    const loop = () => {
+    let lastTime = performance.now();
+    let accumulator = 0;
+    const FIXED_STEP = 1000 / 60; // Exact 60 ticks/second regardless of 60Hz/90Hz/120Hz display refresh rate
+
+    const loop = (currentTime) => {
       if (!this.isRunning) return;
-      this.tick();
+      const frameDelta = Math.min(100, currentTime - lastTime);
+      lastTime = currentTime;
+      accumulator += frameDelta;
+
+      while (accumulator >= FIXED_STEP) {
+        this.tick();
+        accumulator -= FIXED_STEP;
+      }
+
       if (this.onStateUpdate) {
         this.onStateUpdate(this.state);
       }
       this.renderer.render(this.state, 'p1', { p1: this.p1Name, p2: this.p2Name });
       requestAnimationFrame(loop);
     };
-    requestAnimationFrame(loop);
+
+    requestAnimationFrame((t) => {
+      lastTime = t;
+      loop(t);
+    });
   }
 
   stop() {
@@ -178,8 +194,9 @@ class LocalGameSimulator {
     const p2 = this.state.paddles.p2;
     const now = Date.now();
 
-    if (now - this.lastErrorUpdate > 1200) {
-      this.aiErrorOffset = (Math.random() - 0.5) * 45;
+    // Human tracking estimation cycle
+    if (now - this.lastErrorUpdate > 900) {
+      this.aiErrorOffset = (Math.random() - 0.5) * 35;
       this.lastErrorUpdate = now;
     }
 
@@ -187,7 +204,7 @@ class LocalGameSimulator {
     let closestDist = Infinity;
 
     this.state.balls.forEach(b => {
-      if (b.vx > 0 && b.x > 450) {
+      if (b.vx > 0 && b.x > 320) {
         const dist = 1004 - b.x;
         if (dist < closestDist) {
           closestDist = dist;
@@ -197,10 +214,29 @@ class LocalGameSimulator {
     });
 
     if (targetBall) {
-      const targetCenter = targetBall.y + this.aiErrorOffset;
-      p2.targetY = targetCenter - p2.height / 2;
+      let estimatedY = targetBall.y;
+
+      // 1. Curving Fireballs: Human reaction cannot predict the sinusoidal arc phase accurately!
+      // Add significant dynamic curve perturbation so curving fireballs fool the bot
+      if (targetBall.type === 'fireball') {
+        const curveNoise = Math.sin((targetBall.curvePhase || 0) * 2.2) * 55;
+        estimatedY += curveNoise + (Math.random() - 0.5) * 30;
+      } else if (targetBall.type === 'guided') {
+        // 2. Guided Ball: Delayed reaction to human thumb remote steering
+        estimatedY = (this.lastEstimatedY || targetBall.y) * 0.72 + targetBall.y * 0.28;
+      }
+
+      // 3. Wall Bounces: When ball rebounds off top/bottom walls, add realistic angle misjudgment
+      if (targetBall.y < 100 || targetBall.y > 600) {
+        estimatedY += (targetBall.vy > 0 ? -28 : 28);
+      }
+
+      this.lastEstimatedY = estimatedY;
+      const targetCenter = estimatedY + this.aiErrorOffset;
+      p2.targetY = Math.max(10, Math.min(700 - p2.height - 10, targetCenter - p2.height / 2));
     } else {
-      p2.targetY = 350 - p2.height / 2 + Math.sin(now * 0.0015) * 40;
+      // Idle rhythm breathing when ball is on opponent's half
+      p2.targetY = 350 - p2.height / 2 + Math.sin(now * 0.0015) * 45;
     }
   }
 
@@ -272,13 +308,14 @@ class LocalGameSimulator {
     const p1 = this.state.paddles.p1;
     p1.y += (p1.targetY - p1.y) * 0.45;
 
-    // Player 2 Paddle (Fast human responsiveness if multiplayer!)
+    // Player 2 Paddle (Snappier, faster speed + realistic human tracking)
     const p2 = this.state.paddles.p2;
     if (this.isMultiplayer) {
       p2.y += (p2.targetY - p2.y) * 0.45;
     } else {
       const diff = p2.targetY - p2.y;
-      const aiMaxSpeed = 4.2;
+      const isFastPhase = this.state.isSuddenDeath || p2.turboTimer > 0;
+      const aiMaxSpeed = isFastPhase ? 6.8 : 5.6; // Increased from 4.2 for snappier agility
       if (Math.abs(diff) < aiMaxSpeed) {
         p2.y = p2.targetY;
       } else {

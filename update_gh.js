@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Add EMP Overcharge (15% paddle shrink) and Nanite Repair Drone powerups',
+    message: 'Implement 60Hz fixed timestep accumulator and realistic AI prediction/speed tuning',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with EMP & Repair Drone!');
+  console.log('GitHub updated successfully with 60Hz fixed timestep and AI tuning!');
 })();
