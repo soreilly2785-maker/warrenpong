@@ -305,8 +305,8 @@ class GameRenderer {
 
   drawCenterBarriers(ctx, paddles) {
     if (!paddles) return;
-    const p1Barrier = paddles.p1 && paddles.p1.activeEffects && (p1BarrierVal = paddles.p1.activeEffects.barrier) && p1BarrierVal > 0;
-    const p2Barrier = paddles.p2 && paddles.p2.activeEffects && (p2BarrierVal = paddles.p2.activeEffects.barrier) && p2BarrierVal > 0;
+    const p1Barrier = !!(paddles.p1 && paddles.p1.activeEffects && paddles.p1.activeEffects.barrier > 0);
+    const p2Barrier = !!(paddles.p2 && paddles.p2.activeEffects && paddles.p2.activeEffects.barrier > 0);
     if (!p1Barrier && !p2Barrier) return;
 
     ctx.save();

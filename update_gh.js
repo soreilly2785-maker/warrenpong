@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Add fair dual airdrop distribution and 1-Way Center Defense Shield powerup',
+    message: 'Fix renderer drawCenterBarriers variable evaluation',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with Dual Airdrops & 1-Way Defense Shield!');
+  console.log('GitHub updated successfully with renderer fix!');
 })();
