@@ -572,12 +572,22 @@ function initApp() {
         const color = ev.slot === 'p1' ? '#00f0ff' : '#ff0077';
         renderer.addExplosion(ev.x, ev.y, 35, color);
         renderer.addFloatingText('🛡️ DEFLECTION!', ev.x, ev.y, color, 16);
+      } else if (ev.type === 'emp_hit') {
+        if (sound.playEMPShock) sound.playEMPShock();
+        renderer.addExplosion(ev.x, ev.y, 40, '#a855f7');
+        renderer.addFloatingText('⚡ 15% PADDLE SHRINK!', ev.x, ev.y, '#c084fc', 18);
+      } else if (ev.type === 'brick_repaired') {
+        if (sound.playRepairChime) sound.playRepairChime();
+        renderer.addSparkles(ev.x, ev.y, '#00ff88', 16);
+        renderer.addFloatingText('🛠️ REPAIRED!', ev.x, ev.y, '#00ff88', 16);
       } else if (ev.type === 'powerup_collect') {
         sound.playPowerupCollect();
         let name = (ev.powerup || '').toUpperCase();
         if (ev.powerup === 'giant') name = 'PADDLE EXTEND';
         else if (ev.powerup === 'guided') name = 'GUIDED STEERING';
         else if (ev.powerup === 'barrier') name = 'ONE-WAY DEFENSE';
+        else if (ev.powerup === 'emp') name = 'EMP OVERCHARGE';
+        else if (ev.powerup === 'repair') name = 'NANITE REPAIR';
         renderer.addFloatingText(`+${name}!`, ev.x, ev.y, '#ffd700', 18);
       } else if (ev.type === 'goal_score') {
         sound.playGoalScore();

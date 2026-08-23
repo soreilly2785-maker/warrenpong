@@ -412,6 +412,8 @@ class GameRenderer {
         else if (b.powerup === 'multiball') icon = '🌀';
         else if (b.powerup === 'fireball') icon = '🔥';
         else if (b.powerup === 'barrier') icon = '🛡️';
+        else if (b.powerup === 'emp') icon = '⚡';
+        else if (b.powerup === 'repair') icon = '🧱';
         ctx.fillText(icon, b.x + b.w / 2, b.y + b.h / 2);
       }
 
@@ -457,6 +459,17 @@ class GameRenderer {
         ctx.shadowBlur = 20;
         ctx.strokeStyle = '#ff4500';
         ctx.fillStyle = '#ff6600';
+      } else if (effects.emp > 0) {
+        ctx.shadowColor = '#c084fc';
+        ctx.shadowBlur = 22;
+        ctx.strokeStyle = '#c084fc';
+        ctx.fillStyle = '#9333ea';
+      } else if (effects.shrink > 0) {
+        const pulse = Math.sin(time * 6) * 4;
+        ctx.shadowColor = '#ec4899';
+        ctx.shadowBlur = 16 + pulse;
+        ctx.strokeStyle = '#f43f5e';
+        ctx.fillStyle = '#881337';
       } else if (effects.guided > 0) {
         ctx.shadowColor = '#00f0ff';
         ctx.shadowBlur = 20;
@@ -505,6 +518,18 @@ class GameRenderer {
         ctx.textAlign = 'center';
         const labelX = isP1 ? pX + pW + 35 : pX - 35;
         ctx.fillText(`🔥 FIRE ${Math.ceil(effects.fireball)}s`, labelX, pY + pH / 2);
+      } else if (effects.emp > 0) {
+        ctx.fillStyle = '#c084fc';
+        ctx.font = 'bold 10px Orbitron';
+        ctx.textAlign = 'center';
+        const labelX = isP1 ? pX + pW + 35 : pX - 35;
+        ctx.fillText(`⚡ EMP ${Math.ceil(effects.emp)}s`, labelX, pY + pH / 2);
+      } else if (effects.shrink > 0) {
+        ctx.fillStyle = '#f43f5e';
+        ctx.font = 'bold 10px Orbitron';
+        ctx.textAlign = 'center';
+        const labelX = isP1 ? pX + pW + 35 : pX - 35;
+        ctx.fillText(`🔻 -15% ${Math.ceil(effects.shrink)}s`, labelX, pY + pH / 2);
       } else if (effects.guided > 0) {
         ctx.fillStyle = '#00f0ff';
         ctx.font = 'bold 10px Orbitron';
@@ -554,6 +579,8 @@ class GameRenderer {
         let trailColor = `rgba(255, 255, 255, ${alpha})`;
         if (ball.type === 'fireball') {
           trailColor = `rgba(255, 69, 0, ${alpha})`;
+        } else if (ball.type === 'emp') {
+          trailColor = `rgba(192, 132, 252, ${alpha})`;
         } else if (ball.type === 'guided') {
           trailColor = `rgba(0, 240, 255, ${alpha})`;
         } else if (ball.isTurbo) {
@@ -619,6 +646,23 @@ class GameRenderer {
             shape: 'spark'
           });
         }
+      } else if (ball.type === 'emp') {
+        ballColor = '#f3e8ff';
+        glowColor = '#a855f7';
+        ctx.shadowBlur = 25;
+        if (Math.random() < 0.45) {
+          this.particles.push({
+            x: ball.x + (Math.random() * 10 - 5),
+            y: ball.y + (Math.random() * 10 - 5),
+            vx: (Math.random() * 3 - 1.5),
+            vy: (Math.random() * 3 - 1.5),
+            size: Math.random() * 3 + 1.5,
+            color: Math.random() > 0.5 ? '#c084fc' : '#e9d5ff',
+            alpha: 0.95,
+            decay: 0.06,
+            shape: 'spark'
+          });
+        }
       } else if (ball.type === 'guided') {
         ballColor = '#00f0ff';
         glowColor = '#0077ff';
@@ -681,6 +725,8 @@ class GameRenderer {
       else if (item.type === 'fireball') icon = '🔥';
       else if (item.type === 'giant') icon = '📏';
       else if (item.type === 'barrier') icon = '🛡️';
+      else if (item.type === 'emp') icon = '⚡';
+      else if (item.type === 'repair') icon = '🧱';
 
       ctx.fillText(icon, item.x, item.y);
       ctx.restore();

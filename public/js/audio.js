@@ -110,6 +110,20 @@ class SoundManager {
     this.playTone(880, 'sine', 0.08, 0.2, 100);
   }
 
+  playEMPShock() {
+    this.playTone(720, 'sawtooth', 0.18, 0.35, -450);
+    this.playNoise(0.15, 0.25);
+  }
+
+  playRepairChime() {
+    if (this.muted || !this.ctx) return;
+    [440, 554.37, 659.25, 880].forEach((f, i) => {
+      setTimeout(() => {
+        this.playTone(f, 'sine', 0.12, 0.22, 20);
+      }, i * 50);
+    });
+  }
+
   playBrickHit(destroyed = false, isCore = false, combo = 1) {
     if (isCore) {
       this.playTone(550 + combo * 20, 'square', 0.25, 0.3, 100);

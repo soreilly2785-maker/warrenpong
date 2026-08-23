@@ -426,7 +426,7 @@ class Room {
   }
 
   spawnRandomAirdrop() {
-    const types = ['giant', 'guided', 'multiball', 'fireball', 'barrier'];
+    const types = ['giant', 'guided', 'multiball', 'fireball', 'barrier', 'emp', 'repair'];
     const p1Type = types[Math.floor(Math.random() * types.length)];
     const p2Type = types[Math.floor(Math.random() * types.length)];
     const spawnY1 = 120 + Math.random() * (ARENA_HEIGHT - 240);
@@ -517,8 +517,14 @@ class Room {
           paddle.activeEffects[effect] -= 1 / TICK_RATE;
           if (paddle.activeEffects[effect] <= 0) {
             delete paddle.activeEffects[effect];
-            if (effect === 'giant') {
-              paddle.height = PADDLE_DEFAULT_HEIGHT;
+            if (effect === 'giant' || effect === 'shrink') {
+              if (paddle.activeEffects.giant > 0) {
+                paddle.height = 92;
+              } else if (paddle.activeEffects.shrink > 0) {
+                paddle.height = Math.round(PADDLE_DEFAULT_HEIGHT * 0.85);
+              } else {
+                paddle.height = PADDLE_DEFAULT_HEIGHT;
+              }
             }
           }
         }
@@ -754,6 +760,20 @@ class Room {
   }
 
   handlePaddleHit(ball, paddle, slot, isSuddenDeath = false) {
+    // If incoming ball was electrified by opponent, shrink this paddle by 15% (10s duration)
+    if (ball.type === 'emp' && ball.lastHitter && ball.lastHitter !== slot) {
+      paddle.activeEffects.shrink = 10;
+      if (paddle.activeEffects.giant <= 0) {
+        paddle.height = Math.round(PADDLE_DEFAULT_HEIGHT * 0.85); // 49px
+      }
+      this.game.events.push({
+        type: 'emp_hit',
+        slot,
+        x: ball.x,
+        y: ball.y
+      });
+    }
+
     ball.lastHitter = slot;
 
     if (paddle.turboTimer <= 0) {
@@ -766,6 +786,7 @@ class Room {
 
     const hasGuided = (paddle.activeEffects.guided > 0);
     const hasFireball = (paddle.activeEffects.fireball > 0);
+    const hasEmp = (paddle.activeEffects.emp > 0);
     const isTurboActive = (paddle.turboTimer > 0);
 
     let speed = ball.speed || 8.5;
@@ -784,6 +805,9 @@ class Room {
       ball.curvePhase = 0;
     } else if (hasGuided) {
       ball.type = 'guided';
+      ball.typeTimer = 8;
+    } else if (hasEmp) {
+      ball.type = 'emp';
       ball.typeTimer = 8;
     } else {
       ball.type = 'normal';
@@ -861,6 +885,26 @@ class Room {
           curvePhase: 0
         });
         break;
+      case 'emp':
+        paddle.activeEffects.emp = 12;
+        break;
+      case 'repair': {
+        const deadBricks = this.game.bricks.filter(b => b.owner === slot && !b.alive && b.type !== 'core');
+        const toRevive = deadBricks.slice(0, 2);
+        toRevive.forEach(b => {
+          b.alive = true;
+          b.hp = b.maxHp;
+          this.broadcastBrickUpdate(b);
+          this.game.events.push({
+            type: 'brick_repaired',
+            id: b.id,
+            slot,
+            x: b.x + b.w / 2,
+            y: b.y + b.h / 2
+          });
+        });
+        break;
+      }
       case 'barrier':
         paddle.activeEffects.barrier = 12;
         break;

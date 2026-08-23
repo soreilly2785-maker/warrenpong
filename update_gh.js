@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Fix renderer drawCenterBarriers variable evaluation',
+    message: 'Add EMP Overcharge (15% paddle shrink) and Nanite Repair Drone powerups',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with renderer fix!');
+  console.log('GitHub updated successfully with EMP & Repair Drone!');
 })();

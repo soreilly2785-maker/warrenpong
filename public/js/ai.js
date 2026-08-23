@@ -205,7 +205,7 @@ class LocalGameSimulator {
   }
 
   spawnRandomAirdrop() {
-    const types = ['giant', 'guided', 'multiball', 'fireball', 'barrier'];
+    const types = ['giant', 'guided', 'multiball', 'fireball', 'barrier', 'emp', 'repair'];
     const p1Type = types[Math.floor(Math.random() * types.length)];
     const p2Type = types[Math.floor(Math.random() * types.length)];
     const spawnY1 = 120 + Math.random() * 460;
@@ -299,7 +299,15 @@ class LocalGameSimulator {
           p.activeEffects[eff] -= 1 / 60;
           if (p.activeEffects[eff] <= 0) {
             delete p.activeEffects[eff];
-            if (eff === 'giant') p.height = 58;
+            if (eff === 'giant' || eff === 'shrink') {
+              if (p.activeEffects.giant > 0) {
+                p.height = 92;
+              } else if (p.activeEffects.shrink > 0) {
+                p.height = Math.round(58 * 0.85);
+              } else {
+                p.height = 58;
+              }
+            }
           }
         }
       }
@@ -504,6 +512,17 @@ class LocalGameSimulator {
   }
 
   handlePaddleHit(ball, paddle, slot, isSuddenDeath = false) {
+    // If incoming ball was electrified by opponent, shrink this paddle by 15% (10s duration)
+    if (ball.type === 'emp' && ball.lastHitter && ball.lastHitter !== slot) {
+      paddle.activeEffects.shrink = 10;
+      if (paddle.activeEffects.giant <= 0) {
+        paddle.height = Math.round(58 * 0.85); // 49px
+      }
+      if (this.sound.playEMPShock) this.sound.playEMPShock();
+      this.renderer.addExplosion(ball.x, ball.y, 40, '#a855f7');
+      this.renderer.addFloatingText('⚡ 15% PADDLE SHRINK!', ball.x, ball.y, '#c084fc', 18);
+    }
+
     ball.lastHitter = slot;
 
     if (paddle.turboTimer <= 0) {
@@ -516,6 +535,7 @@ class LocalGameSimulator {
 
     const hasGuided = (paddle.activeEffects.guided > 0);
     const hasFireball = (paddle.activeEffects.fireball > 0);
+    const hasEmp = (paddle.activeEffects.emp > 0);
     const isTurboActive = (paddle.turboTimer > 0);
 
     let speed = ball.speed || 8.5;
@@ -540,6 +560,12 @@ class LocalGameSimulator {
       this.sound.playPaddleHit(false, paddle.combo);
       this.renderer.addSparkles(ball.x, ball.y, '#00f0ff', 12);
       this.renderer.addFloatingText('🎯 STEER WITH THUMB!', ball.x, ball.y, '#00f0ff', 16);
+    } else if (hasEmp) {
+      ball.type = 'emp';
+      ball.typeTimer = 8;
+      if (this.sound.playEMPShock) this.sound.playEMPShock();
+      this.renderer.addSparkles(ball.x, ball.y, '#c084fc', 14);
+      this.renderer.addFloatingText('⚡ EMP ELECTRIFIED!', ball.x, ball.y, '#a855f7', 16);
     } else {
       ball.type = 'normal';
       ball.typeTimer = 0;
@@ -608,6 +634,21 @@ class LocalGameSimulator {
           curvePhase: 0
         });
         break;
+      case 'emp':
+        p.activeEffects.emp = 12;
+        break;
+      case 'repair': {
+        const deadBricks = this.state.bricks.filter(b => b.owner === slot && !b.alive && b.type !== 'core');
+        const toRevive = deadBricks.slice(0, 2);
+        toRevive.forEach(b => {
+          b.alive = true;
+          b.hp = b.maxHp;
+          if (this.sound.playRepairChime) this.sound.playRepairChime();
+          this.renderer.addSparkles(b.x + b.w / 2, b.y + b.h / 2, '#00ff88', 16);
+          this.renderer.addFloatingText('🛠️ REPAIRED!', b.x + b.w / 2, b.y, '#00ff88', 16);
+        });
+        break;
+      }
       case 'barrier':
         p.activeEffects.barrier = 12;
         break;
