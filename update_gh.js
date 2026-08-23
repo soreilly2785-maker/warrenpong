@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Bundle local socket.io and qrcode scripts (0 external CDN deps)',
+    message: 'Fix mobile DOM readyState initialization race condition',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with 100% local vendor scripts!');
+  console.log('GitHub updated successfully with readyState initialization fix!');
 })();

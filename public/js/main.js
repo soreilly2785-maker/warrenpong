@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
   // Global Error Trap
   window.addEventListener('error', (e) => {
     console.error('Runtime error:', e.message);
@@ -878,4 +878,10 @@
       modalJoin.classList.remove('hidden');
     }, 600);
   }
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
