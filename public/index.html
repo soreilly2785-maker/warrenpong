@@ -1,322 +1,298 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>WarrenPong - LAN Multiplayer Arcade</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22><text y=%221em%22 font-size=%2280%22>🏓</text></svg>">
 </head>
 <body>
   <div id="app-container">
-    
-    <!-- TOP HEADER / NAV -->
-    <header id="game-header">
+
+    <!-- TOP GLOBAL HEADER -->
+    <header id="global-header">
       <div class="logo-group">
         <span class="logo-icon">⚡</span>
-        <span class="logo-text">WARREN<span class="highlight">PONG</span></span>
+        <h1 class="logo-text">WARREN<span>PONG</span></h1>
       </div>
-      <div class="header-controls">
-        <button id="btn-flip-view" class="icon-btn" title="Toggle View Perspective (Bottom View / Landscape)">
-          <span id="flip-icon">🔄</span>
-          <span id="flip-label">Bottom View</span>
+      <div class="header-actions">
+        <button id="btn-flip-view" class="btn btn-icon" title="Toggle Mobile View Angle">
+          <span>🔄</span>
+          <span id="flip-label" class="header-btn-label">Landscape</span>
         </button>
-        <button id="btn-lan-info" class="icon-btn" title="Share Game Link & QR Code">
-          <span>🔗 Share / QR</span>
+        <button id="btn-lan-info" class="btn btn-icon" title="Share Game Link">
+          <span>🔗</span>
+          <span class="header-btn-label">Share / QR</span>
         </button>
-        <button id="btn-sound" class="icon-btn" title="Toggle Sound">
+        <button id="btn-sound" class="btn btn-icon" title="Toggle Sound">
           <span id="sound-icon">🔊</span>
         </button>
-        <button id="btn-fullscreen" class="icon-btn" title="Fullscreen">
+        <button id="btn-fullscreen" class="btn btn-icon" title="Toggle Fullscreen">
           <span>⛶</span>
         </button>
       </div>
     </header>
 
-    <!-- MAIN VIEWPORT -->
-    <main id="main-stage">
-      
-      <!-- SCREEN 1: LOBBY -->
-      <section id="screen-lobby" class="screen active">
-        <div class="hero-box">
-          <h1 class="glitch-title" data-text="WARRENPONG">WARRENPONG</h1>
-          <p class="subtitle">Pong × Core Defense Duel</p>
-
-          <!-- OBJECTIVE BOX -->
-          <div class="objective-banner">
-            <div class="objective-header">🎯 PRIMARY GOAL (INSTANT WIN):</div>
-            <div class="objective-desc">Shatter all <strong>6 Core Crystals (⚡)</strong> in the enemy base to win by <strong>KNOCKOUT!</strong></div>
-          </div>
-
-          <!-- TURBO & POWER-UPS INFO -->
-          <div class="skills-banner">
-            <div class="skills-header">🎁 POWER-UPS & AIRDROPS:</div>
-            <div class="skills-desc">
-              &bull; 🎯 <strong>Guided Ball:</strong> Remotely steer the ball in flight with your thumb to pilot around defenses!<br>
-              &bull; 🔥 <strong>Fireball:</strong> Curving arc meteor that burns straight through 2 defense bricks!<br>
-              &bull; 📏 <strong>Paddle Extend:</strong> +65% wide defense shield &bull; 🌀 <strong>Multiball:</strong> Extra ball<br>
-              &bull; ⚡ <strong>Turbo:</strong> +60% hypersonic speed surge!
-            </div>
-          </div>
-
-          <!-- PLAYER PROFILE -->
-          <div class="player-profile-card">
-            <label for="input-player-name">YOUR CALLSIGN</label>
-            <div class="name-input-wrap">
-              <input type="text" id="input-player-name" maxlength="14" placeholder="Enter your name" value="NeonStriker">
-              <button id="btn-random-name" title="Generate Random Name">🎲</button>
-            </div>
-          </div>
-
-          <!-- PLAY MODES -->
-          <div class="lobby-actions">
-            <button id="btn-quick-play" class="btn btn-primary btn-large">
-              <span class="btn-icon">⚡</span>
-              <span class="btn-text">
-                <strong>QUICK MATCH</strong>
-                <small>Auto-match on local Wi-Fi</small>
-              </span>
-            </button>
-
-            <div class="action-row">
-              <button id="btn-create-room" class="btn btn-secondary">
-                <span class="btn-icon">➕</span>
-                <span>Create Room</span>
-              </button>
-              
-              <button id="btn-join-modal" class="btn btn-secondary">
-                <span class="btn-icon">🔑</span>
-                <span>Join Code</span>
-              </button>
-            </div>
-
-            <button id="btn-solo-ai" class="btn btn-tertiary">
-              <span class="btn-icon">🤖</span>
-              <span>Solo vs AI Bot</span>
-            </button>
-          </div>
-
-          <!-- GUIDE CHIPS -->
-          <div class="guide-chips">
-            <div class="chip"><span>📱 Mobile:</span> Use the elevated touch track below the court to glide your paddle without blocking the view!</div>
-          </div>
+    <!-- SCREEN 1: MAIN LOBBY -->
+    <section id="screen-lobby" class="screen active">
+      <div class="lobby-content">
+        <div class="hero-banner">
+          <div class="hero-tag">HIGH-SPEED ONLINE ARCADE</div>
+          <h2 class="hero-title">BREAK BRICKS. DEFEND CORES. CLASH!</h2>
+          <p class="hero-subtitle">Real-time multiplayer arcade Pong powered by dedicated cloud servers.</p>
         </div>
-      </section>
 
-      <!-- SCREEN 2: WAITING ROOM -->
-      <section id="screen-room" class="screen">
-        <div class="room-box">
-          <div class="room-header">
-            <h2>BATTLE ROOM</h2>
-            <div class="room-code-badge">
-              <span>ROOM CODE:</span>
-              <strong id="display-room-code">----</strong>
-              <button id="btn-copy-code" title="Copy Room Link">📋 Copy</button>
-            </div>
-          </div>
-
-          <!-- 1v1 MATCHUP CARDS -->
-          <div class="matchup-container">
-            <div class="slot-card p1-card">
-              <div class="slot-badge">PLAYER 1</div>
-              <div class="player-avatar cyan">🛡️</div>
-              <div id="p1-slot-name" class="slot-name">Waiting...</div>
-              <div id="p1-slot-status" class="slot-status ready">HOST</div>
-            </div>
-
-            <div class="vs-divider">
-              <span>VS</span>
-              <div class="pulse-ring"></div>
-            </div>
-
-            <div class="slot-card p2-card">
-              <div class="slot-badge">PLAYER 2</div>
-              <div class="player-avatar magenta">⚔️</div>
-              <div id="p2-slot-name" class="slot-name">Waiting for challenger...</div>
-              <div id="p2-slot-status" class="slot-status waiting">WAITING</div>
-            </div>
-          </div>
-
-          <div class="room-footer-notice">
-            <p id="room-status-text">📱 Share room code or QR code with a friend on your local Wi-Fi!</p>
-            <div class="room-actions">
-              <button id="btn-show-room-qr" class="btn btn-secondary">📱 Show QR</button>
-              <button id="btn-leave-room" class="btn btn-outline">Leave Room</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- SCREEN 3: IN-GAME BATTLEGROUND -->
-      <section id="screen-game" class="screen">
-        <!-- HUD BAR -->
-        <div id="game-hud">
-          <div class="hud-player p1-hud">
-            <div class="hud-name-row">
-              <span class="hud-indicator cyan-dot"></span>
-              <span id="hud-p1-name" class="hud-name">Player 1</span>
-            </div>
-            <!-- BIG PROMINENT SCORE -->
-            <div class="hud-score-display highlight-cyan" id="hud-p1-score">0</div>
-            <div class="hud-cores-row">
-              <span class="cores-label">CORES:</span>
-              <span id="hud-p1-cores" class="cores-value highlight-cyan">⚡ 6/6</span>
-              <span class="hud-combo" id="hud-p1-combo"></span>
-            </div>
-          </div>
-
-          <div class="hud-center">
-            <div class="match-timer-box">
-              <span class="timer-label">TIME</span>
-              <span id="hud-timer">03:00</span>
-            </div>
-            <!-- 8s TURBO ACCELERATOR BUTTON -->
-            <button id="btn-turbo" class="turbo-badge" title="Tap to activate 8s Turbo Speed Acceleration">
-              <span>⚡ TURBO (READY)</span>
-            </button>
-            <button id="btn-in-game-exit" class="hud-exit-btn" title="Leave Match">
-              <span>🚪 Exit</span>
-            </button>
-          </div>
-
-          <div class="hud-player p2-hud">
-            <div class="hud-name-row">
-              <span id="hud-p2-name" class="hud-name">Player 2</span>
-              <span class="hud-indicator magenta-dot"></span>
-            </div>
-            <!-- BIG PROMINENT SCORE -->
-            <div class="hud-score-display highlight-magenta" id="hud-p2-score">0</div>
-            <div class="hud-cores-row">
-              <span class="hud-combo" id="hud-p2-combo"></span>
-              <span class="cores-label">CORES:</span>
-              <span id="hud-p2-cores" class="cores-value highlight-magenta">⚡ 6/6</span>
-            </div>
+        <div class="player-setup-card">
+          <label for="input-player-name" class="input-label">CALLSIGN / HANDLE</label>
+          <div class="input-with-action">
+            <input type="text" id="input-player-name" maxlength="15" placeholder="Enter your callsign..." autocomplete="off">
+            <button id="btn-random-name" class="btn btn-secondary btn-small" title="Generate Random Callsign">🎲 Reroll</button>
           </div>
         </div>
 
-        <!-- CANVAS ARENA -->
-        <div id="canvas-wrapper">
-          <canvas id="game-canvas" width="1200" height="700"></canvas>
-
-          <!-- COUNTDOWN OVERLAY -->
-          <div id="countdown-overlay" class="hidden">
-            <div id="countdown-number">3</div>
-            <div id="countdown-subtext" class="countdown-subtext">DESTROY ALL ENEMY CORES!</div>
-          </div>
-        </div>
-
-        <!-- DEDICATED BOTTOM TOUCHPAD ZONE -->
-        <div id="touchpad-zone">
-          <div class="touchpad-slider">
-            <div class="touchpad-track">
-              <span class="track-hint">◄ SLIDE THUMB HERE TO GLIDE PADDLE ►</span>
-              <div id="touchpad-thumb-glow" class="thumb-indicator"></div>
+        <div class="lobby-actions-grid">
+          <button id="btn-quick-play" class="btn btn-primary btn-large glow-btn">
+            <span class="btn-icon">⚡</span>
+            <div class="btn-text-group">
+              <span class="btn-main-text">QUICK PLAY</span>
+              <span class="btn-sub-text">Instant Matchmaking vs Online Challenger</span>
             </div>
+          </button>
+
+          <div class="lobby-actions-row">
+            <button id="btn-create-room" class="btn btn-secondary">
+              <span class="btn-icon">➕</span>
+              <span>Create Private Room</span>
+            </button>
+            <button id="btn-join-modal" class="btn btn-secondary">
+              <span class="btn-icon">🚪</span>
+              <span>Join via Code</span>
+            </button>
           </div>
-          <button id="btn-touchpad-turbo" class="btn-touchpad-turbo" title="Tap to trigger 8s Turbo Speed">
-            ⚡ TURBO
+
+          <button id="btn-solo-ai" class="btn btn-ghost">
+            <span class="btn-icon">🤖</span>
+            <span>Practice vs Cyber Bot (Solo AI)</span>
           </button>
         </div>
-      </section>
+      </div>
+    </section>
 
-    </main>
+    <!-- SCREEN 2: ROOM LOBBY -->
+    <section id="screen-room" class="screen">
+      <div class="room-card">
+        <div class="room-header">
+          <div class="room-badge">ROOM CODE</div>
+          <div class="room-code-display" id="display-room-code">----</div>
+          <button id="btn-copy-code" class="btn btn-small btn-secondary">📋 Copy Code</button>
+        </div>
 
-    <!-- MODAL 1: JOIN WITH CODE -->
+        <div class="room-status-indicator" id="room-status-text">
+          Waiting for challenger to connect...
+        </div>
+
+        <div class="versus-slots">
+          <!-- Player 1 Slot -->
+          <div class="player-slot" id="slot-p1">
+            <div class="slot-badge neon-blue">PLAYER 1 (LEFT)</div>
+            <div class="slot-avatar neon-border-blue">P1</div>
+            <div class="slot-name" id="p1-slot-name">Waiting...</div>
+            <div class="slot-status ready" id="p1-slot-status">READY</div>
+          </div>
+
+          <div class="versus-divider">
+            <span class="vs-text">VS</span>
+            <div class="vs-glow"></div>
+          </div>
+
+          <!-- Player 2 Slot -->
+          <div class="player-slot" id="slot-p2">
+            <div class="slot-badge neon-pink">PLAYER 2 (RIGHT)</div>
+            <div class="slot-avatar neon-border-pink">P2</div>
+            <div class="slot-name" id="p2-slot-name">Searching for challenger...</div>
+            <div class="slot-status waiting" id="p2-slot-status">WAITING</div>
+          </div>
+        </div>
+
+        <div class="room-footer-actions">
+          <button id="btn-show-room-qr" class="btn btn-secondary">
+            <span>📱 Invite via QR / Share Link</span>
+          </button>
+          <button id="btn-leave-room" class="btn btn-ghost text-danger">
+            <span>Leave Room</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 3: GAME SCREEN -->
+    <section id="screen-game" class="screen">
+      <!-- IN-GAME HUD -->
+      <div id="game-hud">
+        <div class="hud-player hud-p1">
+          <div class="hud-color-bar bar-blue"></div>
+          <div class="hud-player-info">
+            <span class="hud-name" id="hud-p1-name">Player 1</span>
+            <div class="hud-stats">
+              <span class="hud-score" id="hud-p1-score">0 pts</span>
+              <span class="hud-cores" id="hud-p1-cores">⚡ 6/6</span>
+            </div>
+            <div class="hud-combo" id="hud-p1-combo"></div>
+          </div>
+        </div>
+
+        <div class="hud-center">
+          <div class="hud-timer-badge">
+            <span class="timer-icon">⏱️</span>
+            <span id="hud-timer">03:00</span>
+          </div>
+          <button id="btn-turbo" class="turbo-badge" title="Tap to Activate 8s Super Turbo Speed!">
+            ⚡ TURBO CHARGE (TAP)
+          </button>
+        </div>
+
+        <div class="hud-player hud-p2">
+          <div class="hud-player-info text-right">
+            <span class="hud-name" id="hud-p2-name">Player 2</span>
+            <div class="hud-stats justify-end">
+              <span class="hud-cores" id="hud-p2-cores">⚡ 6/6</span>
+              <span class="hud-score" id="hud-p2-score">0 pts</span>
+            </div>
+            <div class="hud-combo" id="hud-p2-combo"></div>
+          </div>
+          <div class="hud-color-bar bar-pink"></div>
+        </div>
+
+        <button id="btn-in-game-exit" class="btn-exit-small" title="Exit Match">✕</button>
+      </div>
+
+      <!-- CANVAS ARENA CONTAINER -->
+      <div id="canvas-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- COUNTDOWN OVERLAY -->
+        <div id="countdown-overlay" class="hidden">
+          <div id="countdown-number">3</div>
+        </div>
+      </div>
+
+      <!-- VIRTUAL TOUCHPAD CONTROLS FOR MOBILE (BOTTOM VIEW) -->
+      <div id="touchpad-container" class="touchpad-zone hidden">
+        <div class="touchpad-track">
+          <div class="touchpad-hint">◀ SLIDE THUMB HERE TO DEFEND ▶</div>
+          <div id="touchpad-thumb" class="touchpad-thumb"></div>
+        </div>
+        <button id="btn-touchpad-turbo" class="btn-touchpad-turbo">⚡ TURBO</button>
+      </div>
+    </section>
+
+    <!-- MODAL: JOIN VIA CODE -->
     <div id="modal-join" class="modal-backdrop hidden">
-      <div class="modal-card">
+      <div class="modal-dialog">
         <div class="modal-header">
-          <h3>JOIN PRIVATE ROOM</h3>
-          <button class="btn-close-modal" id="btn-close-join">✕</button>
+          <h3 class="modal-title">JOIN PRIVATE ROOM</h3>
+          <button id="btn-close-join" class="modal-close">✕</button>
         </div>
         <div class="modal-body">
-          <p>Enter the 4-letter room code shown on the host's screen:</p>
-          <input type="text" id="input-join-code" maxlength="4" placeholder="e.g. ABCD" autocomplete="off" autocorrect="off" autocapitalize="characters">
-          <div id="join-error-msg" class="error-text hidden"></div>
+          <p class="modal-desc">Enter the 4-letter room code shared by your opponent:</p>
+          <input type="text" id="input-join-code" class="input-code" maxlength="4" placeholder="e.g. ABCD" autocomplete="off" autocapitalize="characters">
+          <div id="join-error-msg" class="error-banner hidden">Room not found. Check the code and try again.</div>
         </div>
         <div class="modal-footer">
-          <button id="btn-confirm-join" class="btn btn-primary btn-full">CONNECT TO ROOM</button>
+          <button id="btn-confirm-join" class="btn btn-primary btn-large">Connect & Play</button>
         </div>
       </div>
     </div>
 
-    <!-- MODAL 2: SHARE / QR CODE JOIN -->
+    <!-- MODAL: SHARE & QR CODE -->
     <div id="modal-lan" class="modal-backdrop hidden">
-      <div class="modal-card qr-card">
+      <div class="modal-dialog">
         <div class="modal-header">
-          <h3>SHARE / PLAY ONLINE</h3>
-          <button class="btn-close-modal" id="btn-close-lan">✕</button>
+          <h3 class="modal-title">SHARE MATCH / QR CODE</h3>
+          <button id="btn-close-lan" class="modal-close">✕</button>
         </div>
-        <div class="modal-body">
-          <p>Scan this QR code with a phone or share the link below to invite a friend to play instantly:</p>
-          <div class="qr-container">
+        <div class="modal-body text-center">
+          <p class="modal-desc">Scan with your phone camera or share the direct link:</p>
+          <div id="lan-qr-container" class="qr-box">
             <div id="lan-qr-canvas"></div>
-            <img id="lan-qr-img" alt="Room QR Code" class="hidden" src="">
-            <div id="lan-qr-loading" class="spinner hidden"></div>
           </div>
           <div class="lan-url-box">
-            <span class="url-label">Share Link:</span>
-            <code id="lan-url-text">https://...</code>
-            <button id="btn-copy-lan-url" class="btn-mini">Copy</button>
+            <span id="lan-url-text">https://warrenpong.pages.dev</span>
+            <button id="btn-copy-lan-url" class="btn btn-small btn-secondary">Copy</button>
           </div>
         </div>
         <div class="modal-footer">
-          <button id="btn-done-lan" class="btn btn-secondary btn-full">Done</button>
+          <button id="btn-done-lan" class="btn btn-primary">Done</button>
         </div>
       </div>
     </div>
 
-    <!-- MODAL 3: IN-GAME EXIT CONFIRMATION -->
+    <!-- MODAL: IN-GAME EXIT CONFIRMATION -->
     <div id="modal-exit" class="modal-backdrop hidden">
-      <div class="modal-card modal-sm">
+      <div class="modal-dialog">
         <div class="modal-header">
-          <h3>EXIT MATCH?</h3>
-          <button class="btn-close-modal" id="btn-close-exit">✕</button>
+          <h3 class="modal-title">LEAVE MATCH?</h3>
+          <button id="btn-close-exit" class="modal-close">✕</button>
         </div>
         <div class="modal-body">
-          <p>Are you sure you want to leave? This will forfeit the match and return you to the lobby.</p>
+          <p class="modal-desc">Are you sure you want to forfeit and return to the main lobby?</p>
         </div>
         <div class="modal-footer">
-          <button id="btn-confirm-exit" class="btn btn-danger">Yes, Forfeit</button>
-          <button id="btn-cancel-exit" class="btn btn-secondary">Stay in Game</button>
+          <button id="btn-cancel-exit" class="btn btn-secondary">Stay & Play</button>
+          <button id="btn-confirm-exit" class="btn btn-primary bg-danger">Leave Match</button>
         </div>
       </div>
     </div>
 
-    <!-- MODAL 4: GAME OVER & WINNER ANNOUNCEMENT -->
+    <!-- MODAL: GAME OVER -->
     <div id="modal-gameover" class="modal-backdrop hidden">
-      <div class="modal-card victory-card">
-        <div class="victory-crown">👑</div>
-        <h2 id="winner-title" class="winner-title">KNOCKOUT!</h2>
-        <p id="winner-subtitle" class="winner-subtitle">Player 1 Shattered all Core Crystals!</p>
+      <div class="modal-dialog gameover-dialog">
+        <div class="gameover-header">
+          <div class="trophy-icon">🏆</div>
+          <h2 id="winner-title" class="gameover-title">VICTORY!</h2>
+          <p id="winner-subtitle" class="gameover-subtitle">Player 1 Shattered all Core Crystals!</p>
+        </div>
 
-        <!-- STATS TABLE COMPARISON -->
-        <div class="endgame-stats-grid">
-          <div class="stat-col p1-stat-col">
-            <h4 id="endgame-p1-name">Player 1</h4>
-            <div class="stat-value highlight-cyan" id="endgame-p1-score">0 pts</div>
-            <div class="stat-sub" id="endgame-p1-cores">Cores Left: 0</div>
-            <div class="stat-sub" id="endgame-p1-combo">Max Combo: 0</div>
+        <div class="gameover-stats-grid">
+          <div class="endgame-player-card" id="endgame-p1">
+            <span class="endgame-tag neon-blue">PLAYER 1</span>
+            <h4 id="endgame-p1-name" class="endgame-name">NeonStriker</h4>
+            <div class="stat-row">
+              <span>Final Score:</span>
+              <strong id="endgame-p1-score">1,450 pts</strong>
+            </div>
+            <div class="stat-row">
+              <span>Cores Shattered:</span>
+              <strong id="endgame-p1-cores">6</strong>
+            </div>
+            <div class="stat-row">
+              <span>Max Combo:</span>
+              <strong id="endgame-p1-combo">x5</strong>
+            </div>
           </div>
 
-          <div class="stat-col vs-col">
-            <span class="stat-label">SCORE</span>
-            <span class="stat-label">CORES</span>
-            <span class="stat-label">MAX COMBO</span>
-          </div>
-
-          <div class="stat-col p2-stat-col">
-            <h4 id="endgame-p2-name">Player 2</h4>
-            <div class="stat-value highlight-magenta" id="endgame-p2-score">0 pts</div>
-            <div class="stat-sub" id="endgame-p2-cores">Cores Left: 0</div>
-            <div class="stat-sub" id="endgame-p2-combo">Max Combo: 0</div>
+          <div class="endgame-player-card" id="endgame-p2">
+            <span class="endgame-tag neon-pink">PLAYER 2</span>
+            <h4 id="endgame-p2-name" class="endgame-name">CyberAce</h4>
+            <div class="stat-row">
+              <span>Final Score:</span>
+              <strong id="endgame-p2-score">820 pts</strong>
+            </div>
+            <div class="stat-row">
+              <span>Cores Shattered:</span>
+              <strong id="endgame-p2-cores">3</strong>
+            </div>
+            <div class="stat-row">
+              <span>Max Combo:</span>
+              <strong id="endgame-p2-combo">x2</strong>
+            </div>
           </div>
         </div>
 
-        <!-- REMATCH & LOBBY BUTTONS -->
         <div class="gameover-actions">
           <button id="btn-rematch" class="btn btn-primary btn-large">
             <span class="btn-icon">🔄</span>
@@ -334,9 +310,10 @@
 
   </div>
 
-  <!-- QR CODE LIBRARY (FOR LIVE ROOM SHARING) -->
+  <!-- SOCKET.IO & QR CODE LIBRARIES -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- GAME MODULES (100% SELF-CONTAINED ZERO-DEPENDENCY P2P) -->
+  <!-- GAME MODULES -->
   <script src="js/audio.js"></script>
   <script src="js/renderer.js"></script>
   <script src="js/controls.js"></script>

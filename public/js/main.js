@@ -264,42 +264,25 @@ document.addEventListener('DOMContentLoaded', () => {
     isGameLoopRunning = true;
 
     let lastFrameTime = performance.now();
-    let lastBroadcastTime = 0;
 
     const loop = (now) => {
       if (!isGameLoopRunning) return;
       const dt = Math.min((now - lastFrameTime) / 1000, 0.033);
       lastFrameTime = now;
 
-      // 1. Host Mode: Step physics & broadcast flat telemetry
-      if (p2p.isHost && p2p.isGameRunning && p2p.simulator) {
-        p2p.simulator.tick();
-        const hostState = p2p.simulator.state;
-
-        // Broadcast at 45Hz
-        if (now - lastBroadcastTime >= 22) {
-          lastBroadcastTime = now;
-          p2p.broadcastFlatTick(hostState);
+      if (!isSoloMode && activeGameState) {
+        // Smooth local extrapolation between server ticks
+        if (activeGameState.balls) {
+          activeGameState.balls.forEach(b => {
+            b.x += (b.vx || 0) * (dt * 45);
+            b.y += (b.vy || 0) * (dt * 45);
+          });
         }
 
-        // Throttle DOM HUD to 4Hz (every 250ms)
-        if (now - lastHudUpdateTime >= 250) {
-          lastHudUpdateTime = now;
-          updateHUD(hostState);
+        // Instant 0ms local paddle movement for YOUR paddle
+        if (activeGameState.paddles && activeGameState.paddles[mySlot]) {
+          activeGameState.paddles[mySlot].y = localPredictedY;
         }
-
-        renderer.render(hostState, mySlot, playerNames);
-      }
-      // 2. Client Mode: Extrapolate ball & render predicted paddle
-      else if (!p2p.isHost && !isSoloMode) {
-        const b = activeGameState.balls[0];
-        if (b) {
-          b.x += (b.vx || 0) * (dt * 60);
-          b.y += (b.vy || 0) * (dt * 60);
-        }
-
-        // 0ms instant paddle prediction for Player 2
-        activeGameState.paddles.p2.y += (localPredictedY - activeGameState.paddles.p2.y) * 0.55;
 
         // Throttle DOM HUD to 4Hz (every 250ms)
         if (now - lastHudUpdateTime >= 250) {
@@ -425,45 +408,61 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Unpack Flat Numeric Telemetry (< 50 Bytes, 0 GC)
-    p2p.on('flat_tick', (f) => {
-      // f = [timeRemaining, p1Y, p1H, p1Score, p1Combo, p1Mask, p1TurboSec, p2Y, p2H, p2Score, p2Combo, p2Mask, p2TurboSec, bx, by, bvx, bvy, bTypeCode, bHitterCode, bIsTurbo]
-      activeGameState.timeRemaining = f[0];
-
-      // Paddle 1 (Host)
-      activeGameState.paddles.p1.y = f[1];
-      activeGameState.paddles.p1.height = f[2];
-      activeGameState.paddles.p1.score = f[3];
-      activeGameState.paddles.p1.combo = f[4];
-      activeGameState.paddles.p1.turboTimer = f[6];
-      activeGameState.paddles.p1.activeEffects = {
-        giant: (f[5] & 1) ? 8 : 0,
-        fireball: (f[5] & 2) ? 8 : 0,
-        guided: (f[5] & 4) ? 8 : 0
-      };
-
-      // Paddle 2 (Client - Keep local predicted Y)
-      activeGameState.paddles.p2.height = f[8];
-      activeGameState.paddles.p2.score = f[9];
-      activeGameState.paddles.p2.combo = f[10];
-      activeGameState.paddles.p2.turboTimer = f[12];
-      activeGameState.paddles.p2.activeEffects = {
-        giant: (f[11] & 1) ? 8 : 0,
-        fireball: (f[11] & 2) ? 8 : 0,
-        guided: (f[11] & 4) ? 8 : 0
-      };
-
-      // Ball
-      const ball = activeGameState.balls[0];
-      if (ball) {
-        ball.x = f[13];
-        ball.y = f[14];
-        ball.vx = f[15];
-        ball.vy = f[16];
-        ball.type = f[17] === 1 ? 'fireball' : (f[17] === 2 ? 'guided' : 'normal');
-        ball.lastHitter = f[18] === 1 ? 'p1' : (f[18] === 2 ? 'p2' : null);
-        ball.isTurbo = f[19] === 1;
+    p2p.on('game_tick', (delta) => {
+      if (!isGameLoopRunning && !isSoloMode) {
+        startCentralRenderLoop();
       }
+
+      activeGameState.timeRemaining = delta.t;
+      activeGameState.isSuddenDeath = delta.sd;
+
+      // Paddle 1
+      if (delta.p1) {
+        activeGameState.paddles.p1.y = (mySlot === 'p1') ? localPredictedY : delta.p1[0];
+        activeGameState.paddles.p1.height = delta.p1[1];
+        activeGameState.paddles.p1.score = delta.p1[2];
+        activeGameState.paddles.p1.combo = delta.p1[3];
+        activeGameState.paddles.p1.activeEffects = delta.p1[4] || {};
+        activeGameState.paddles.p1.charge = delta.p1[5] !== undefined ? delta.p1[5] : 0;
+        activeGameState.paddles.p1.turboTimer = delta.p1[6] !== undefined ? delta.p1[6] : 0;
+      }
+
+      // Paddle 2
+      if (delta.p2) {
+        activeGameState.paddles.p2.y = (mySlot === 'p2') ? localPredictedY : delta.p2[0];
+        activeGameState.paddles.p2.height = delta.p2[1];
+        activeGameState.paddles.p2.score = delta.p2[2];
+        activeGameState.paddles.p2.combo = delta.p2[3];
+        activeGameState.paddles.p2.activeEffects = delta.p2[4] || {};
+        activeGameState.paddles.p2.charge = delta.p2[5] !== undefined ? delta.p2[5] : 0;
+        activeGameState.paddles.p2.turboTimer = delta.p2[6] !== undefined ? delta.p2[6] : 0;
+      }
+
+      // Balls
+      activeGameState.balls = (delta.b || []).map(b => ({
+        id: b[0],
+        x: b[1],
+        y: b[2],
+        vx: b[3],
+        vy: b[4],
+        radius: 10,
+        type: b[5],
+        lastHitter: b[6],
+        isTurbo: b[7] === 1
+      }));
+
+      // Powerups
+      activeGameState.powerupItems = (delta.pw || []).map(pw => ({
+        id: pw[0],
+        type: pw[1],
+        x: pw[2],
+        y: pw[3],
+        vx: pw[4],
+        vy: pw[5],
+        radius: 16
+      }));
+
+      processGameEvents(delta.ev || []);
     });
 
     p2p.on('game_over', (summary) => {
