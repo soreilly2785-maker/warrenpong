@@ -390,8 +390,11 @@ document.addEventListener('DOMContentLoaded', () => {
     p2p.on('game_start', ({ players, bricks }) => {
       countdownOverlay.classList.add('hidden');
       if (players) {
-        if (players.p1) playerNames.p1 = players.p1.name;
-        if (players.p2) playerNames.p2 = players.p2.name;
+        const pList = Object.values(players);
+        const p1 = pList.find(p => p.slot === 'p1');
+        const p2 = pList.find(p => p.slot === 'p2');
+        if (p1) playerNames.p1 = p1.name;
+        if (p2) playerNames.p2 = p2.name;
       }
       if (bricks) {
         clientBricks = bricks;
@@ -569,12 +572,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnQuickPlay.addEventListener('click', () => {
     unlockAudio();
-    showToast('Finding match...');
+    showToast('Searching for online challenger...');
+    p1SlotName.textContent = getPlayerName();
+    p1SlotStatus.textContent = 'READY';
+    p1SlotStatus.className = 'slot-status ready';
+    p2SlotName.textContent = 'Searching for challenger...';
+    p2SlotStatus.textContent = 'WAITING';
+    p2SlotStatus.className = 'slot-status waiting';
+    displayRoomCode.textContent = '----';
+    roomStatusText.textContent = '⚡ Searching for online match...';
+    showScreen(screenRoom);
     p2p.quickMatch(getPlayerName());
   });
 
   btnCreateRoom.addEventListener('click', () => {
     unlockAudio();
+    showToast('Creating private room...');
+    p1SlotName.textContent = getPlayerName();
+    p1SlotStatus.textContent = 'READY (HOST)';
+    p1SlotStatus.className = 'slot-status ready';
+    p2SlotName.textContent = 'Waiting for friend...';
+    p2SlotStatus.textContent = 'WAITING';
+    p2SlotStatus.className = 'slot-status waiting';
+    displayRoomCode.textContent = '----';
+    roomStatusText.textContent = 'Creating private room...';
+    showScreen(screenRoom);
     p2p.createRoom(null, getPlayerName());
   });
 
@@ -598,7 +620,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     unlockAudio();
     modalJoin.classList.add('hidden');
-    showToast(`Connecting to Room ${code}...`);
+    p1SlotName.textContent = 'Room Host';
+    p1SlotStatus.textContent = 'READY';
+    p1SlotStatus.className = 'slot-status ready';
+    p2SlotName.textContent = getPlayerName();
+    p2SlotStatus.textContent = 'JOINING';
+    p2SlotStatus.className = 'slot-status waiting';
+    displayRoomCode.textContent = code;
+    roomStatusText.textContent = `Connecting to room ${code}...`;
+    showScreen(screenRoom);
     p2p.joinRoom(code, getPlayerName());
   });
 

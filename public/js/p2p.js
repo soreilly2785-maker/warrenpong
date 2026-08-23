@@ -1,7 +1,5 @@
 ﻿/**
  * WarrenPong High-Speed Socket.io Network Engine
- * Universal low-latency multiplayer via dedicated cloud backend (Render)
- * 100% Guaranteed 0-lag gameplay, 1-second Quick Match & 4-letter rooms
  */
 class SocketNetworkManager {
   constructor() {
@@ -13,6 +11,7 @@ class SocketNetworkManager {
     this.opponentName = 'Opponent';
     this.eventListeners = new Map();
     this.isConnected = false;
+    this.connectionListeners = [];
 
     this.initSocket();
   }
@@ -47,14 +46,16 @@ class SocketNetworkManager {
     if (typeof io !== 'undefined') {
       this.socket = io(url, {
         transports: ['websocket', 'polling'],
-        reconnectionAttempts: 10,
+        reconnection: true,
+        reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
-        timeout: 10000
+        timeout: 20000
       });
 
       this.socket.on('connect', () => {
         this.isConnected = true;
-        console.log('Connected to backend server! Socket ID:', this.socket.id);
+        this.emit('server_connected', { socketId: this.socket.id });
+        console.log('✅ Connected to backend server! Socket ID:', this.socket.id);
       });
 
       this.socket.on('room_joined', ({ roomCode, slot, isHost }) => {
@@ -69,11 +70,14 @@ class SocketNetworkManager {
       });
 
       this.socket.on('lobby_update', ({ roomCode, players, isHost }) => {
-        const p1 = (players || []).find(p => p.slot === 'p1');
-        const p2 = (players || []).find(p => p.slot === 'p2');
+        const pList = Object.values(players || {});
+        const p1 = pList.find(p => p.slot === 'p1');
+        const p2 = pList.find(p => p.slot === 'p2');
         this.emit('lobby_update', {
+          roomCode,
           p1: p1 ? p1.name : null,
-          p2: p2 ? p2.name : null
+          p2: p2 ? p2.name : null,
+          players: pList
         });
       });
 
@@ -86,7 +90,6 @@ class SocketNetworkManager {
       });
 
       this.socket.on('game_tick', (delta) => {
-        // Delta from authoritative server loop
         this.emit('game_tick', delta);
       });
 
@@ -104,6 +107,7 @@ class SocketNetworkManager {
 
       this.socket.on('disconnect', () => {
         this.isConnected = false;
+        this.emit('server_disconnected', {});
       });
     }
   }
@@ -114,8 +118,13 @@ class SocketNetworkManager {
     if (!this.socket || !this.socket.connected) {
       this.initSocket();
     }
-    if (this.socket) {
+    const send = () => {
       this.socket.emit('quick_match', { playerName: this.playerName });
+    };
+    if (this.socket && this.socket.connected) {
+      send();
+    } else if (this.socket) {
+      this.socket.once('connect', send);
     }
   }
 
@@ -125,11 +134,16 @@ class SocketNetworkManager {
     if (!this.socket || !this.socket.connected) {
       this.initSocket();
     }
-    if (this.socket) {
+    const send = () => {
       this.socket.emit('create_room', {
         playerName: this.playerName,
         customCode: customCode || null
       });
+    };
+    if (this.socket && this.socket.connected) {
+      send();
+    } else if (this.socket) {
+      this.socket.once('connect', send);
     }
   }
 
@@ -139,11 +153,16 @@ class SocketNetworkManager {
     if (!this.socket || !this.socket.connected) {
       this.initSocket();
     }
-    if (this.socket) {
+    const send = () => {
       this.socket.emit('join_room', {
         roomCode: roomCode.toUpperCase().trim(),
         playerName: this.playerName
       });
+    };
+    if (this.socket && this.socket.connected) {
+      send();
+    } else if (this.socket) {
+      this.socket.once('connect', send);
     }
   }
 

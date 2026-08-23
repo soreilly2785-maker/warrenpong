@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Connect Socket.io client to Render backend',
+    message: 'Update mobile screen transitions and Socket.io queued emits',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
