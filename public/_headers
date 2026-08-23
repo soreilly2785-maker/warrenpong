@@ -1,17 +1,15 @@
-﻿# Cloudflare Pages Custom Headers for WarrenPong
+﻿# Cloudflare Pages Headers (Disable caching during active development)
 /*
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: interest-cohort=()
+  Cache-Control: no-cache, no-store, must-revalidate
 
-# Cache CSS and JS assets for 7 days
 /css/*
-  Cache-Control: public, max-age=604800
+  Cache-Control: no-cache, no-store, must-revalidate
 
 /js/*
-  Cache-Control: public, max-age=604800
+  Cache-Control: no-cache, no-store, must-revalidate
 
-# Keep HTML fresh
 /index.html
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: no-cache, no-store, must-revalidate

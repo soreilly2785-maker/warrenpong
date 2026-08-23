@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=2.2">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22><text y=%221em%22 font-size=%2280%22>🏓</text></svg>">
 </head>
 <body>
@@ -19,7 +19,7 @@
     <header id="game-header">
       <div class="logo-group">
         <span class="logo-icon">⚡</span>
-        <span class="logo-text">WARREN<span class="highlight">PONG</span></span>
+        <span class="logo-text">WARREN<span class="highlight">PONG</span> <span style="font-size:0.65rem; opacity:0.6; font-weight:normal; letter-spacing:0;">v2.2</span></span>
       </div>
       <div class="header-controls">
         <button id="btn-flip-view" class="icon-btn" title="Toggle View Perspective (Bottom View / Landscape)">
@@ -335,14 +335,13 @@
 
   </div>
 
-  <!-- 100% LOCAL BUNDLED VENDOR SCRIPTS (ZERO CDN DEPENDENCIES) -->
-  <script src="js/socket.io.min.js"></script>
-  <script src="js/qrcode.min.js"></script>
-  <!-- GAME MODULES -->
-  <script src="js/audio.js"></script>
-  <script src="js/renderer.js"></script>
-  <script src="js/controls.js"></script>
-  <script src="js/ai.js"></script>
-  <script src="js/main.js"></script>
+  <!-- CACHE-BUSTED SCRIPTS (v=2.2) -->
+  <script src="js/socket.io.min.js?v=2.2"></script>
+  <script src="js/qrcode.min.js?v=2.2"></script>
+  <script src="js/audio.js?v=2.2"></script>
+  <script src="js/renderer.js?v=2.2"></script>
+  <script src="js/controls.js?v=2.2"></script>
+  <script src="js/ai.js?v=2.2"></script>
+  <script src="js/main.js?v=2.2"></script>
 </body>
 </html>

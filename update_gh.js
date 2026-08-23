@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Safely guard localStorage and subsystem initializations',
+    message: 'Disable 7-day browser caching in _headers and add v2.2 cache-busters',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with localStorage & subsystem guards!');
+  console.log('GitHub updated successfully with cache-busting headers!');
 })();
