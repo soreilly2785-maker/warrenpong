@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Implement 60Hz fixed timestep accumulator and realistic AI prediction/speed tuning',
+    message: 'Add Quick Match Radar (waiting alerts), Top 5 Leaderboard, and Head-to-Head rivalry tracker',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with 60Hz fixed timestep and AI tuning!');
+  console.log('GitHub updated successfully with Leaderboard, Radar & H2H!');
 })();

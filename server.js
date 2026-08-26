@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 const QRCode = require('qrcode');
 
 const app = express();
@@ -25,7 +26,157 @@ const BALL_RADIUS = 10;
 const TICK_RATE = 45;
 const TICK_INTERVAL = 1000 / TICK_RATE;
 
+// --- PERSISTENT CALLSIGN LEADERBOARD & H2H STORAGE ---
+const DATA_DIR = path.join(__dirname, 'data');
+const LEADERBOARD_FILE = path.join(DATA_DIR, 'leaderboard.json');
+
+let leaderboardData = {
+  players: {}, // [name]: { wins: 0, losses: 0, totalGames: 0, streak: 0, bestStreak: 0, lastPlayed: 0 }
+  h2h: {}      // ["PlayerA:::PlayerB"]: { [PlayerA]: wins, [PlayerB]: wins, totalGames: 0 }
+};
+
+function loadLeaderboard() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (fs.existsSync(LEADERBOARD_FILE)) {
+      const raw = fs.readFileSync(LEADERBOARD_FILE, 'utf8');
+      leaderboardData = JSON.parse(raw);
+      if (!leaderboardData.players) leaderboardData.players = {};
+      if (!leaderboardData.h2h) leaderboardData.h2h = {};
+    }
+  } catch (err) {
+    console.error('Error loading leaderboard:', err);
+  }
+}
+loadLeaderboard();
+
+let saveTimeout = null;
+function saveLeaderboard() {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify(leaderboardData, null, 2), 'utf8');
+    } catch (err) {
+      console.error('Error saving leaderboard:', err);
+    }
+  }, 300);
+}
+
+function getTop5Leaderboard() {
+  const list = Object.entries(leaderboardData.players).map(([name, data]) => {
+    const wins = data.wins || 0;
+    const losses = data.losses || 0;
+    const total = data.totalGames || (wins + losses);
+    const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+    return {
+      name,
+      wins,
+      losses,
+      totalGames: total,
+      winRate,
+      streak: data.streak || 0,
+      bestStreak: data.bestStreak || 0
+    };
+  });
+
+  list.sort((a, b) => {
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+    return b.totalGames - a.totalGames;
+  });
+
+  return list.slice(0, 5);
+}
+
+function getH2H(p1Name, p2Name) {
+  if (!p1Name || !p2Name || p1Name === p2Name) return { p1Wins: 0, p2Wins: 0, totalGames: 0 };
+  const n1 = p1Name.trim();
+  const n2 = p2Name.trim();
+  const pairKey = [n1, n2].sort().join(':::');
+  const h2h = leaderboardData.h2h[pairKey];
+  if (!h2h) {
+    return { p1Wins: 0, p2Wins: 0, totalGames: 0 };
+  }
+  return {
+    p1Wins: h2h[n1] || 0,
+    p2Wins: h2h[n2] || 0,
+    totalGames: h2h.totalGames || 0
+  };
+}
+
+function recordMatchResult(winnerName, loserName) {
+  if (!winnerName || !loserName || winnerName === 'Draw') return;
+  const wName = winnerName.trim();
+  const lName = loserName.trim();
+  if (!wName || !lName || wName === lName) return;
+
+  const now = Date.now();
+
+  // Winner stats
+  if (!leaderboardData.players[wName]) {
+    leaderboardData.players[wName] = { wins: 0, losses: 0, totalGames: 0, streak: 0, bestStreak: 0, lastPlayed: now };
+  }
+  const wPlayer = leaderboardData.players[wName];
+  wPlayer.wins = (wPlayer.wins || 0) + 1;
+  wPlayer.totalGames = (wPlayer.totalGames || 0) + 1;
+  wPlayer.streak = (wPlayer.streak || 0) + 1;
+  wPlayer.bestStreak = Math.max(wPlayer.bestStreak || 0, wPlayer.streak);
+  wPlayer.lastPlayed = now;
+
+  // Loser stats
+  if (!leaderboardData.players[lName]) {
+    leaderboardData.players[lName] = { wins: 0, losses: 0, totalGames: 0, streak: 0, bestStreak: 0, lastPlayed: now };
+  }
+  const lPlayer = leaderboardData.players[lName];
+  lPlayer.losses = (lPlayer.losses || 0) + 1;
+  lPlayer.totalGames = (lPlayer.totalGames || 0) + 1;
+  lPlayer.streak = 0;
+  lPlayer.lastPlayed = now;
+
+  // H2H Record
+  const pairKey = [wName, lName].sort().join(':::');
+  if (!leaderboardData.h2h[pairKey]) {
+    leaderboardData.h2h[pairKey] = {
+      [wName]: 0,
+      [lName]: 0,
+      totalGames: 0
+    };
+  }
+  const h2hRecord = leaderboardData.h2h[pairKey];
+  h2hRecord[wName] = (h2hRecord[wName] || 0) + 1;
+  if (h2hRecord[lName] === undefined) h2hRecord[lName] = 0;
+  h2hRecord.totalGames = (h2hRecord.totalGames || 0) + 1;
+
+  saveLeaderboard();
+  broadcastLeaderboard();
+}
+
+function broadcastLeaderboard() {
+  const top5 = getTop5Leaderboard();
+  io.emit('leaderboard_update', { top5 });
+}
+
+function broadcastMatchmakingRadar() {
+  let waitingCount = 0;
+  for (const room of rooms.values()) {
+    if (room.game.state === 'waiting' && Object.keys(room.players).length === 1) {
+      waitingCount++;
+    }
+  }
+  io.emit('matchmaking_status', {
+    hasWaitingPlayer: waitingCount > 0,
+    waitingCount: waitingCount
+  });
+}
+
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/api/leaderboard', (req, res) => res.json({ top5: getTop5Leaderboard() }));
+app.get('/api/h2h', (req, res) => res.json({ h2h: getH2H(req.query.p1, req.query.p2) }));
 
 function getLocalIp() {
   const interfaces = os.networkInterfaces();
@@ -303,10 +454,22 @@ class Room {
       socket.join(this.code);
 
       if (Object.keys(this.players).length === 2 && this.game.state === 'waiting') {
+        const pList = Object.values(this.players);
+        const p1Name = pList[0].name;
+        const p2Name = pList[1].name;
+        const h2h = getH2H(p1Name, p2Name);
+
+        io.to(this.code).emit('h2h_data', {
+          p1Name,
+          p2Name,
+          h2h
+        });
+
         this.startCountdown();
       }
 
       this.broadcastLobbyUpdate();
+      broadcastMatchmakingRadar();
       return { slot: assignedSlot, success: true };
     } else {
       this.spectators.add(socket.id);
@@ -342,6 +505,7 @@ class Room {
     }
     this.spectators.delete(socketId);
     this.broadcastLobbyUpdate();
+    broadcastMatchmakingRadar();
     return wasPlayer;
   }
 
@@ -366,6 +530,7 @@ class Room {
     this.game.countdown = 3;
     this.rematchVotes.clear();
     this.startLoop();
+    broadcastMatchmakingRadar();
 
     let count = 3;
     io.to(this.code).emit('game_countdown', { count });
@@ -956,25 +1121,37 @@ class Room {
     this.game.winner = winnerSlot;
     this.game.winReason = reason;
 
+    const p1Obj = Object.values(this.players).find(p => p.slot === 'p1');
+    const p2Obj = Object.values(this.players).find(p => p.slot === 'p2');
+    const p1Name = p1Obj ? p1Obj.name : 'Player 1';
+    const p2Name = p2Obj ? p2Obj.name : 'Player 2';
+
     let winnerName = 'Draw';
-    if (winnerSlot === 'p1' || winnerSlot === 'p2') {
-      const winnerPlayer = Object.values(this.players).find(p => p.slot === winnerSlot);
-      winnerName = winnerPlayer ? winnerPlayer.name : (winnerSlot === 'p1' ? 'Player 1' : 'Player 2');
+    if (winnerSlot === 'p1') {
+      winnerName = p1Name;
+      recordMatchResult(p1Name, p2Name);
+    } else if (winnerSlot === 'p2') {
+      winnerName = p2Name;
+      recordMatchResult(p2Name, p1Name);
     }
+
+    const updatedH2H = getH2H(p1Name, p2Name);
 
     const endSummary = {
       winner: winnerSlot,
       winnerName: winnerName,
       reason: reason,
+      h2h: updatedH2H,
+      leaderboard: getTop5Leaderboard(),
       p1: {
-        name: (Object.values(this.players).find(p => p.slot === 'p1') || {}).name || 'Player 1',
+        name: p1Name,
         score: this.game.paddles.p1.score,
         bricksDestroyed: this.game.paddles.p1.bricksDestroyed,
         maxCombo: this.game.paddles.p1.maxCombo,
         powerupsCollected: this.game.paddles.p1.powerupsCollected
       },
       p2: {
-        name: (Object.values(this.players).find(p => p.slot === 'p2') || {}).name || 'Player 2',
+        name: p2Name,
         score: this.game.paddles.p2.score,
         bricksDestroyed: this.game.paddles.p2.bricksDestroyed,
         maxCombo: this.game.paddles.p2.maxCombo,
@@ -983,6 +1160,7 @@ class Room {
     };
 
     io.to(this.code).emit('game_over', endSummary);
+    broadcastMatchmakingRadar();
   }
 
   voteRematch(socketId) {
@@ -1048,6 +1226,25 @@ class Room {
 io.on('connection', (socket) => {
   let currentRoom = null;
 
+  // Send initial lobby data (radar status and top 5 leaderboard)
+  let waitingCount = 0;
+  for (const r of rooms.values()) {
+    if (r.game.state === 'waiting' && Object.keys(r.players).length === 1) waitingCount++;
+  }
+  socket.emit('matchmaking_status', {
+    hasWaitingPlayer: waitingCount > 0,
+    waitingCount: waitingCount
+  });
+  socket.emit('leaderboard_data', { top5: getTop5Leaderboard() });
+
+  socket.on('get_leaderboard', () => {
+    socket.emit('leaderboard_data', { top5: getTop5Leaderboard() });
+  });
+
+  socket.on('get_h2h', ({ p1, p2 }) => {
+    socket.emit('h2h_data', { p1Name: p1, p2Name: p2, h2h: getH2H(p1, p2) });
+  });
+
   socket.on('create_room', ({ playerName }) => {
     let code = generateRoomCode();
     while (rooms.has(code)) {
@@ -1063,6 +1260,7 @@ io.on('connection', (socket) => {
       slot: result.slot,
       isHost: true
     });
+    broadcastMatchmakingRadar();
   });
 
   socket.on('join_room', ({ roomCode, playerName }) => {
@@ -1081,6 +1279,7 @@ io.on('connection', (socket) => {
       slot: result.slot,
       isHost: false
     });
+    broadcastMatchmakingRadar();
   });
 
   socket.on('quick_match', ({ playerName }) => {
@@ -1112,6 +1311,7 @@ io.on('connection', (socket) => {
         isHost: true
       });
     }
+    broadcastMatchmakingRadar();
   });
 
   socket.on('player_input', (input) => {
@@ -1134,6 +1334,7 @@ io.on('connection', (socket) => {
         rooms.delete(currentRoom.code);
       }
       currentRoom = null;
+      broadcastMatchmakingRadar();
     }
   });
 
@@ -1144,6 +1345,7 @@ io.on('connection', (socket) => {
         currentRoom.stopLoop();
         rooms.delete(currentRoom.code);
       }
+      broadcastMatchmakingRadar();
     }
   });
 });

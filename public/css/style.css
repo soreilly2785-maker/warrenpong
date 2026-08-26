@@ -1115,6 +1115,166 @@ input[type="text"] {
 
 .hidden { display: none !important; }
 
+/* RADAR BADGE (QUICK PLAY WAITING ALERT) */
+.radar-badge {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+  animation: radarPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes radarPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.85; box-shadow: 0 0 16px rgba(16, 185, 129, 0.9); }
+}
+
+/* LEADERBOARD CARD */
+.leaderboard-card {
+  width: 100%;
+  background: rgba(16, 22, 40, 0.75);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 10px;
+  backdrop-filter: blur(8px);
+}
+
+.leaderboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+}
+
+.leaderboard-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #ffd700;
+  letter-spacing: 0.8px;
+}
+
+.career-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 240, 255, 0.12);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+}
+
+.career-label {
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+#career-record {
+  color: var(--cyan-glow);
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+.leaderboard-table-wrap {
+  overflow-x: auto;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  text-align: left;
+}
+
+.leaderboard-table th {
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.leaderboard-table td {
+  padding: 6px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.leaderboard-table tr:last-child td {
+  border-bottom: none;
+}
+
+.leaderboard-table .rank-cell {
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+.leaderboard-table .name-cell {
+  font-weight: 700;
+  color: #ffffff;
+  max-width: 110px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leaderboard-table .wins-cell {
+  font-family: var(--font-display);
+  color: var(--cyan-glow);
+  font-weight: 800;
+}
+
+.leaderboard-table .winrate-cell {
+  font-family: var(--font-display);
+  color: #10b981;
+}
+
+.leaderboard-table .streak-cell {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.empty-leaderboard {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 12px 0;
+  font-style: italic;
+}
+
+/* HEAD-TO-HEAD RIVALRY BANNERS */
+.h2h-banner, .gameover-h2h-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(90deg, rgba(0, 240, 255, 0.12), rgba(255, 0, 119, 0.12));
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  border-radius: 8px;
+  padding: 6px 14px;
+  margin: 10px 0;
+  font-family: var(--font-display);
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #ffd700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
+}
+
+.h2h-icon {
+  font-size: 0.95rem;
+}
+
 /* MOBILE RESPONSIVE MEDIA QUERIES */
 @media (max-width: 600px) {
   #game-header { padding: 4px 8px; height: 42px; }
@@ -1139,4 +1299,7 @@ input[type="text"] {
   .btn-touchpad-turbo { height: 40px; padding: 0 12px; font-size: 0.76rem; }
   .touchpad-track { height: 40px; }
   .track-hint { font-size: 0.58rem; letter-spacing: 0.8px; }
+
+  .leaderboard-card { padding: 10px; }
+  .leaderboard-table { font-size: 0.68rem; }
 }

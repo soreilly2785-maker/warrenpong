@@ -73,6 +73,16 @@ function initApp() {
   const countdownNumber = document.getElementById('countdown-number');
   const canvas = document.getElementById('game-canvas');
 
+  // Leaderboard & H2H UI
+  const radarBadge = document.getElementById('radar-badge');
+  const quickPlaySubtext = document.getElementById('quick-play-subtext');
+  const leaderboardBody = document.getElementById('leaderboard-body');
+  const careerRecord = document.getElementById('career-record');
+  const roomH2hBanner = document.getElementById('room-h2h-banner');
+  const roomH2hText = document.getElementById('room-h2h-text');
+  const gameoverH2hBanner = document.getElementById('gameover-h2h-banner');
+  const gameoverH2hText = document.getElementById('gameover-h2h-text');
+
   // Game Over UI
   const winnerTitle = document.getElementById('winner-title');
   const winnerSubtitle = document.getElementById('winner-subtitle');
@@ -99,6 +109,80 @@ function initApp() {
   let playerNames = { p1: 'Player 1', p2: 'Player 2' };
   let localPredictedY = 320;
   let lastHudUpdateTime = 0;
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
+  }
+
+  function updateCareerBadge(top5) {
+    if (!careerRecord) return;
+    const myName = getPlayerName();
+    let found = null;
+    if (top5 && top5.length) {
+      found = top5.find(p => p.name.toLowerCase() === myName.toLowerCase());
+    }
+    if (found) {
+      careerRecord.textContent = `${found.wins}W - ${found.losses}L (${found.winRate}%)`;
+    } else {
+      let localWins = 0;
+      let localLosses = 0;
+      try {
+        localWins = parseInt(localStorage.getItem('wp_career_wins') || '0', 10);
+        localLosses = parseInt(localStorage.getItem('wp_career_losses') || '0', 10);
+      } catch (e) {}
+      const total = localWins + localLosses;
+      const wr = total > 0 ? Math.round((localWins / total) * 100) : 0;
+      careerRecord.textContent = `${localWins}W - ${localLosses}L${total > 0 ? ` (${wr}%)` : ''}`;
+    }
+  }
+
+  function renderLeaderboard(top5) {
+    if (!leaderboardBody) return;
+    if (!top5 || !top5.length) {
+      leaderboardBody.innerHTML = '<tr><td colspan="5" class="empty-leaderboard">Awaiting combat records...</td></tr>';
+      updateCareerBadge([]);
+      return;
+    }
+
+    const rankIcons = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+    let html = '';
+    top5.forEach((p, idx) => {
+      const isChampion = idx === 0 && p.wins > 0;
+      const rankLabel = rankIcons[idx] || `${idx + 1}`;
+      const nameDisplay = isChampion ? `👑 ${escapeHtml(p.name)}` : escapeHtml(p.name);
+      const streakDisplay = p.streak > 1 ? `🔥 ${p.streak}` : '-';
+
+      html += `
+        <tr>
+          <td class="rank-cell">${rankLabel}</td>
+          <td class="name-cell" title="${escapeHtml(p.name)}">${nameDisplay}</td>
+          <td class="wins-cell">${p.wins}</td>
+          <td class="winrate-cell">${p.winRate}%</td>
+          <td class="streak-cell">${streakDisplay}</td>
+        </tr>
+      `;
+    });
+    leaderboardBody.innerHTML = html;
+    updateCareerBadge(top5);
+  }
+
+  function renderH2HBanner(p1, p2, h2h, bannerEl, textEl) {
+    if (!bannerEl || !textEl) return;
+    if (!h2h || !p1 || !p2 || (h2h.totalGames === 0 && h2h.p1Wins === 0 && h2h.p2Wins === 0)) {
+      bannerEl.classList.add('hidden');
+      return;
+    }
+    bannerEl.classList.remove('hidden');
+    const p1W = h2h.p1Wins || 0;
+    const p2W = h2h.p2Wins || 0;
+    let leaderText = '';
+    if (p1W > p2W) leaderText = ` (${p1} leads)`;
+    else if (p2W > p1W) leaderText = ` (${p2} leads)`;
+    else if (h2h.totalGames > 0) leaderText = ` (Tied series)`;
+
+    textEl.textContent = `All-Time Rivalry: ${p1} (${p1W}) - (${p2W}) ${p2}${leaderText}`;
+  }
 
   // Active state container for rendering
   const activeGameState = {
@@ -198,7 +282,9 @@ function initApp() {
 
     inputPlayerName.addEventListener('change', () => {
       try { localStorage.setItem('brick_clash_name', inputPlayerName.value.trim()); } catch (e) {}
+      updateCareerBadge(null);
     });
+    updateCareerBadge(null);
   }
 
   function getPlayerName() {
@@ -410,6 +496,34 @@ function initApp() {
         processGameEvents(delta.ev || []);
       });
 
+      // Matchmaking Radar Status
+      socket.on('matchmaking_status', (status) => {
+        if (radarBadge && quickPlaySubtext) {
+          if (status && status.hasWaitingPlayer) {
+            radarBadge.classList.remove('hidden');
+            radarBadge.textContent = `🔥 ${status.waitingCount || 1} WAITING`;
+            quickPlaySubtext.textContent = '🔥 1 Player Waiting! Tap to Join Instantly';
+          } else {
+            radarBadge.classList.add('hidden');
+            quickPlaySubtext.textContent = 'Auto-match on online server';
+          }
+        }
+      });
+
+      // Leaderboard Data
+      socket.on('leaderboard_data', ({ top5 }) => {
+        renderLeaderboard(top5);
+      });
+
+      socket.on('leaderboard_update', ({ top5 }) => {
+        renderLeaderboard(top5);
+      });
+
+      // Head-to-Head (H2H) Matchup Series Data
+      socket.on('h2h_data', ({ p1Name, p2Name, h2h }) => {
+        renderH2HBanner(p1Name, p2Name, h2h, roomH2hBanner, roomH2hText);
+      });
+
       socket.on('game_over', (summary) => {
         stopCentralRenderLoop();
         showGameOverModal(summary);
@@ -418,6 +532,7 @@ function initApp() {
       socket.on('opponent_left', ({ message }) => {
         showToast(message || 'Opponent left the match.');
         rematchBtnText.textContent = 'Opponent Left Room';
+        if (roomH2hBanner) roomH2hBanner.classList.add('hidden');
       });
     } catch (e) {
       console.error('Socket init error:', e);
@@ -630,6 +745,32 @@ function initApp() {
       endgameP2Combo.textContent = `x${summary.p2.maxCombo}`;
     }
 
+    // Render H2H in Game Over modal
+    if (summary.h2h && summary.p1 && summary.p2) {
+      renderH2HBanner(summary.p1.name, summary.p2.name, summary.h2h, gameoverH2hBanner, gameoverH2hText);
+    } else if (gameoverH2hBanner) {
+      gameoverH2hBanner.classList.add('hidden');
+    }
+
+    // Render updated leaderboard if present
+    if (summary.leaderboard) {
+      renderLeaderboard(summary.leaderboard);
+    }
+
+    // Save local career stats
+    if (!isDraw) {
+      try {
+        if (isWinner) {
+          const w = parseInt(localStorage.getItem('wp_career_wins') || '0', 10) + 1;
+          localStorage.setItem('wp_career_wins', w);
+        } else {
+          const l = parseInt(localStorage.getItem('wp_career_losses') || '0', 10) + 1;
+          localStorage.setItem('wp_career_losses', l);
+        }
+        updateCareerBadge(summary.leaderboard || null);
+      } catch (e) {}
+    }
+
     rematchBtnText.textContent = 'VOTE REMATCH';
   }
 
@@ -639,6 +780,7 @@ function initApp() {
     const newName = getRandomName();
     if (inputPlayerName) inputPlayerName.value = newName;
     try { localStorage.setItem('brick_clash_name', newName); } catch (e) {}
+    updateCareerBadge(null);
     showToast('Callsign: ' + newName);
   });
 

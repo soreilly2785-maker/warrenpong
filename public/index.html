@@ -14,12 +14,11 @@
 </head>
 <body>
   <div id="app-container">
-    
-    <!-- TOP HEADER / NAV -->
+      <!-- TOP HEADER / NAV -->
     <header id="game-header">
       <div class="logo-group">
         <span class="logo-icon">⚡</span>
-        <span class="logo-text">WARREN<span class="highlight">PONG</span> <span style="font-size:0.65rem; opacity:0.6; font-weight:normal; letter-spacing:0;">v2.6</span></span>
+        <span class="logo-text">WARREN<span class="highlight">PONG</span> <span style="font-size:0.65rem; opacity:0.6; font-weight:normal; letter-spacing:0;">v2.7</span></span>
       </div>
       <div class="header-controls">
         <button id="btn-flip-view" class="icon-btn" title="Toggle View Perspective (Bottom View / Landscape)">
@@ -77,8 +76,11 @@
             <button id="btn-quick-play" class="btn btn-primary btn-large">
               <span class="btn-icon">⚡</span>
               <span class="btn-text">
-                <strong>QUICK MATCH</strong>
-                <small>Auto-match on online server</small>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <strong>QUICK MATCH</strong>
+                  <span id="radar-badge" class="radar-badge hidden">🔥 1 WAITING</span>
+                </div>
+                <small id="quick-play-subtext">Auto-match on online server</small>
               </span>
             </button>
 
@@ -98,6 +100,38 @@
               <span class="btn-icon">🤖</span>
               <span>Solo vs AI Bot</span>
             </button>
+          </div>
+
+          <!-- LEADERBOARD CARD -->
+          <div class="leaderboard-card">
+            <div class="leaderboard-header">
+              <div class="leaderboard-title">
+                <span class="leaderboard-icon">🏆</span>
+                <span>TOP 5 CHAMPIONS</span>
+              </div>
+              <div id="player-career-badge" class="career-badge">
+                <span class="career-label">MY CAREER:</span>
+                <strong id="career-record">0W - 0L</strong>
+              </div>
+            </div>
+            <div class="leaderboard-table-wrap">
+              <table class="leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>RANK</th>
+                    <th>CALLSIGN</th>
+                    <th>WINS</th>
+                    <th>WIN %</th>
+                    <th>STREAK</th>
+                  </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                  <tr>
+                    <td colspan="5" class="empty-leaderboard">Awaiting combat records...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <!-- GUIDE CHIPS -->
@@ -139,6 +173,12 @@
               <div id="p2-slot-name" class="slot-name">Waiting for challenger...</div>
               <div id="p2-slot-status" class="slot-status waiting">WAITING</div>
             </div>
+          </div>
+
+          <!-- HEAD-TO-HEAD RIVALRY BANNER -->
+          <div id="room-h2h-banner" class="h2h-banner hidden">
+            <span class="h2h-icon">⚔️</span>
+            <span id="room-h2h-text">All-Time Series: 0 - 0</span>
           </div>
 
           <div class="room-footer-notice">
@@ -316,6 +356,12 @@
           </div>
         </div>
 
+        <!-- HEAD-TO-HEAD ENDGAME BANNER -->
+        <div id="gameover-h2h-banner" class="gameover-h2h-banner hidden">
+          <span class="h2h-icon">⚔️</span>
+          <span id="gameover-h2h-text">Rivalry Series: Player 1 (0) - Player 2 (0)</span>
+        </div>
+
         <!-- REMATCH & LOBBY BUTTONS -->
         <div class="gameover-actions">
           <button id="btn-rematch" class="btn btn-primary btn-large">
@@ -334,13 +380,13 @@
 
   </div>
 
-  <!-- CACHE-BUSTED SCRIPTS (v=2.6) -->
-  <script src="js/socket.io.min.js?v=2.6"></script>
-  <script src="js/qrcode.min.js?v=2.6"></script>
-  <script src="js/audio.js?v=2.6"></script>
-  <script src="js/renderer.js?v=2.6"></script>
-  <script src="js/controls.js?v=2.6"></script>
-  <script src="js/ai.js?v=2.6"></script>
-  <script src="js/main.js?v=2.6"></script>
+  <!-- CACHE-BUSTED SCRIPTS (v=2.7) -->
+  <script src="js/socket.io.min.js?v=2.7"></script>
+  <script src="js/qrcode.min.js?v=2.7"></script>
+  <script src="js/audio.js?v=2.7"></script>
+  <script src="js/renderer.js?v=2.7"></script>
+  <script src="js/controls.js?v=2.7"></script>
+  <script src="js/ai.js?v=2.7"></script>
+  <script src="js/main.js?v=2.7"></script>
 </body>
 </html>
