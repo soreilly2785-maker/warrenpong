@@ -501,40 +501,25 @@ class GameRenderer {
 
       ctx.lineWidth = 2.5;
 
-      // Draw Gentle Baguette-Shaped Curved Paddle
-      const bulge = 5; // convex arc bulging outward toward arena center
-      const r = Math.min(pW / 2, 7); // smoothly rounded tips
-
+      // Clean Sleek Cyberpunk Rounded Capsule Paddle
+      const r = Math.min(pW / 2, 6);
       ctx.beginPath();
-      if (isP1) {
-        // P1: Left paddle, front convex face on the right (facing arena center)
-        ctx.moveTo(pX, pY + r);
-        ctx.arcTo(pX, pY, pX + pW, pY, r);
-        // Front curved arc bowing outwards to the right
-        ctx.quadraticCurveTo(pX + pW + bulge, pY + pH / 2, pX + pW, pY + pH);
-        ctx.arcTo(pX, pY + pH, pX, pY + pH - r, r);
-        ctx.lineTo(pX, pY + r);
-      } else {
-        // P2: Right paddle, front convex face on the left (facing arena center)
-        ctx.moveTo(pX + pW, pY + r);
-        ctx.arcTo(pX + pW, pY, pX, pY, r);
-        // Front curved arc bowing outwards to the left
-        ctx.quadraticCurveTo(pX - bulge, pY + pH / 2, pX, pY + pH);
-        ctx.arcTo(pX + pW, pY + pH, pX + pW, pY + pH - r, r);
-        ctx.lineTo(pX + pW, pY + r);
-      }
+      ctx.moveTo(pX + r, pY);
+      ctx.lineTo(pX + pW - r, pY);
+      ctx.arcTo(pX + pW, pY, pX + pW, pY + r, r);
+      ctx.lineTo(pX + pW, pY + pH - r);
+      ctx.arcTo(pX + pW, pY + pH, pX + pW - r, pY + pH, r);
+      ctx.lineTo(pX + r, pY + pH);
+      ctx.arcTo(pX, pY + pH, pX, pY + pH - r, r);
+      ctx.lineTo(pX, pY + r);
+      ctx.arcTo(pX, pY, pX + r, pY, r);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
-      // Glowing curved spine
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      const spineX = isP1 ? pX + pW / 2 - 1 : pX + pW / 2 + 1;
-      ctx.moveTo(spineX, pY + 8);
-      ctx.quadraticCurveTo(spineX + (isP1 ? 2.5 : -2.5), pY + pH / 2, spineX, pY + pH - 8);
-      ctx.stroke();
+      // Sleek Center Neon Core
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(pX + pW / 2 - 1.5, pY + 6, 3, pH - 12);
 
       if (isTurboActive) {
         ctx.fillStyle = '#ffd700';

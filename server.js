@@ -961,14 +961,13 @@ class Room {
       paddle.charge = Math.min(100, paddle.charge + 25);
     }
 
-    // 2. Baguette Curved Surface Normal & Incident Reflection Angle
+    // 2. Classic Balanced Paddle Deflection Angle
     const relativeHitY = (ball.y - (paddle.y + paddle.height / 2)) / (paddle.height / 2);
-    const clampedHit = Math.max(-0.9, Math.min(0.9, relativeHitY));
-    const surfaceNormalAngle = clampedHit * (Math.PI / 4.5); // ~40 deg at baguette tips
-    const incidentAngle = Math.atan2(ball.vy, Math.abs(ball.vx));
-    const bounceAngle = Math.max(-1.22, Math.min(1.22, 0.70 * surfaceNormalAngle + 0.30 * incidentAngle));
+    const clampedHit = Math.max(-0.88, Math.min(0.88, relativeHitY));
+    const bounceAngle = clampedHit * (Math.PI / 3.2);
 
     // 3. Paddle Motion -> Ball Spin Transfer (Magnus Effect)
+    // Inverted spin: moving paddle up curves ball down, moving paddle down curves ball up (realistic counter-friction)
     // When Fireball is active, spin is amplified 3x for dramatic, controllable bending curveballs!
     const hasGuided = (paddle.activeEffects.guided > 0);
     const hasFireball = (paddle.activeEffects.fireball > 0);
@@ -978,7 +977,7 @@ class Room {
     const paddleVy = paddle.vy || 0;
     const spinMultiplier = hasFireball ? 3.0 : 1.0;
     const maxSpinLimit = hasFireball ? 7.5 : 2.5;
-    const spinTransfer = Math.max(-maxSpinLimit, Math.min(maxSpinLimit, paddleVy * 0.045 * spinMultiplier));
+    const spinTransfer = -Math.max(-maxSpinLimit, Math.min(maxSpinLimit, paddleVy * 0.045 * spinMultiplier));
     ball.spin = (ball.spin || 0) * 0.2 + spinTransfer;
 
     let speed = ball.speed || 8.5;

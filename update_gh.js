@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Implement baguette curved paddles, spin physics, 3x Fireball curve amp, EMP fix, and responsive string control',
+    message: 'Revert paddle shape to sleek cyberpunk capsule, restore classic bounce angles, and invert spin curve direction',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with v2.8 physics, spin & balance!');
+  console.log('GitHub updated successfully with v2.9 paddle shape & spin fix!');
 })();
