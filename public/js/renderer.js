@@ -59,8 +59,9 @@ class GameRenderer {
     this.screenShake = Math.max(this.screenShake, amount);
   }
 
-  addSparkles(x, y, color = '#00f0ff', count = 8, speed = 3.5) {
+  addSparkles(x, y, color = '#00f0ff', count = 6, speed = 3.2) {
     for (let i = 0; i < count; i++) {
+      if (this.particles.length >= 60) this.particles.shift();
       const angle = Math.random() * Math.PI * 2;
       const vel = (Math.random() * 0.7 + 0.3) * speed;
       this.particles.push({
@@ -71,25 +72,26 @@ class GameRenderer {
         size: Math.random() * 2.5 + 2,
         color: color,
         alpha: 1,
-        decay: Math.random() * 0.04 + 0.025,
+        decay: Math.random() * 0.04 + 0.03,
         shape: 'spark'
       });
     }
   }
 
-  addBrickShards(x, y, w, h, color = '#00f0ff', count = 12) {
+  addBrickShards(x, y, w, h, color = '#00f0ff', count = 8) {
     for (let i = 0; i < count; i++) {
+      if (this.particles.length >= 60) this.particles.shift();
       const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 5 + 2;
+      const speed = Math.random() * 4.5 + 2;
       this.particles.push({
         x: x + Math.random() * w,
         y: y + Math.random() * h,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: Math.random() * 4 + 3,
+        size: Math.random() * 3.5 + 2.5,
         color: color,
         alpha: 1,
-        decay: Math.random() * 0.035 + 0.02,
+        decay: Math.random() * 0.04 + 0.025,
         shape: 'shard',
         rotation: Math.random() * Math.PI,
         vRot: (Math.random() - 0.5) * 0.2
@@ -97,23 +99,25 @@ class GameRenderer {
     }
   }
 
-  addExplosion(x, y, radius = 50, color = '#00f0ff') {
-    this.addScreenShake(8);
+  addExplosion(x, y, radius = 45, color = '#00f0ff') {
+    this.addScreenShake(6);
+    if (this.particles.length >= 60) this.particles.shift();
     this.particles.push({
-      x, y, radius: 10, maxRadius: radius * 1.3,
-      color, alpha: 1, decay: 0.05, shape: 'ring'
+      x, y, radius: 10, maxRadius: radius * 1.2,
+      color, alpha: 1, decay: 0.06, shape: 'ring'
     });
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 10; i++) {
+      if (this.particles.length >= 60) this.particles.shift();
       const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 6 + 2;
+      const speed = Math.random() * 5 + 2;
       this.particles.push({
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: Math.random() * 4 + 2,
+        size: Math.random() * 3.5 + 2,
         color: color,
         alpha: 1,
-        decay: Math.random() * 0.04 + 0.02,
+        decay: Math.random() * 0.045 + 0.025,
         shape: 'spark'
       });
     }
@@ -247,15 +251,15 @@ class GameRenderer {
     ctx.save();
     const time = Date.now() * 0.003;
 
-    // Court Grid
+    // Batched Court Grid (Single Draw Call)
     ctx.strokeStyle = isSuddenDeath ? 'rgba(255, 0, 85, 0.08)' : 'rgba(0, 240, 255, 0.03)';
     ctx.lineWidth = 1;
+    ctx.beginPath();
     for (let x = 0; x < this.virtualWidth; x += 50) {
-      ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, this.virtualHeight);
-      ctx.stroke();
     }
+    ctx.stroke();
 
     // Sudden Death Danger Border
     if (isSuddenDeath) {
@@ -366,11 +370,11 @@ class GameRenderer {
   drawBricks(ctx, bricks) {
     if (!bricks) return;
     const time = Date.now() * 0.003;
+    ctx.save();
 
     bricks.forEach(b => {
       if (!b.alive) return;
 
-      ctx.save();
       const isP1 = b.owner === 'p1';
       let strokeColor = isP1 ? '#00f0ff' : '#ff0077';
       let fillColor = isP1 ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255, 0, 119, 0.3)';
@@ -386,6 +390,8 @@ class GameRenderer {
         fillColor = 'rgba(0, 240, 255, 0.35)';
         ctx.shadowColor = '#00f0ff';
         ctx.shadowBlur = 8;
+      } else {
+        ctx.shadowBlur = 0;
       }
 
       ctx.fillStyle = fillColor;
@@ -426,9 +432,9 @@ class GameRenderer {
         ctx.lineTo(b.x + b.w - 4, b.y + b.h - 6);
         ctx.stroke();
       }
-
-      ctx.restore();
     });
+
+    ctx.restore();
   }
 
   drawPaddles(ctx, paddles, playerNames, playerSlot) {

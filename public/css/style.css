@@ -750,6 +750,9 @@ input[type="text"] {
   background: #040711;
   touch-action: none;
   cursor: crosshair;
+  contain: strict;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 #game-canvas {
@@ -758,6 +761,8 @@ input[type="text"] {
   max-height: 100%;
   aspect-ratio: 1200 / 700;
   object-fit: contain;
+  contain: size layout paint;
+  transform: translateZ(0);
 }
 
 /* DEDICATED BOTTOM TOUCHPAD ZONE */

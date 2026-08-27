@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Enhance spin curve strength and duration sustain across full court (v3.1)',
+    message: 'Remove redundant header icons, optimize rendering pipelines, and add GPU acceleration (v3.2)',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with v3.1 enhanced spin curve!');
+  console.log('GitHub updated successfully with v3.2 performance optimizations!');
 })();

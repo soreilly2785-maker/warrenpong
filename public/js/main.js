@@ -952,15 +952,19 @@ function initApp() {
   });
 
   // Share & QR Modal
-  btnLanInfo.addEventListener('click', () => {
-    renderLiveQR(currentRoomCode);
-    modalLan.classList.remove('hidden');
-  });
+  if (btnLanInfo) {
+    btnLanInfo.addEventListener('click', () => {
+      renderLiveQR(currentRoomCode);
+      modalLan.classList.remove('hidden');
+    });
+  }
 
-  btnShowRoomQr.addEventListener('click', () => {
-    renderLiveQR(currentRoomCode);
-    modalLan.classList.remove('hidden');
-  });
+  if (btnShowRoomQr) {
+    btnShowRoomQr.addEventListener('click', () => {
+      renderLiveQR(currentRoomCode);
+      modalLan.classList.remove('hidden');
+    });
+  }
 
   btnCloseLan.addEventListener('click', () => {
     modalLan.classList.add('hidden');

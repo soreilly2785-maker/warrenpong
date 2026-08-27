@@ -11,7 +11,7 @@ class SoundManager {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (AudioContext) {
-        this.ctx = new AudioContext();
+        this.ctx = new AudioContext({ latencyHint: 'interactive' });
         this.initialized = true;
       }
     } catch (e) {
