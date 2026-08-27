@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Implement deadzone and progressive non-linear power curve for analog spin scaling (v3.3)',
+    message: 'Simplify lobby, full-width tap-anywhere touchpad, and enlarge powerup icons and paddle badges (v3.4)',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with v3.3 analog spin dynamics!');
+  console.log('GitHub updated successfully with v3.4 usability refinements!');
 })();

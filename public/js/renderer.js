@@ -403,13 +403,13 @@ class GameRenderer {
 
       if (b.type === 'core') {
         ctx.fillStyle = '#ffffff';
-        ctx.font = '14px Orbitron';
+        ctx.font = 'bold 20px Orbitron';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('⚡', b.x + b.w / 2, b.y + b.h / 2);
       } else if (b.type === 'power') {
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 13px Orbitron';
+        ctx.font = 'bold 18px Orbitron';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         let icon = '★';
@@ -527,55 +527,47 @@ class GameRenderer {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(pX + pW / 2 - 1.5, pY + 6, 3, pH - 12);
 
-      if (isTurboActive) {
-        ctx.fillStyle = '#ffd700';
-        ctx.font = 'bold 11px Orbitron';
+      // High-Contrast Active Paddle Status Badges (Crystal clear on mobile)
+      let badge = null;
+      if (isTurboActive) badge = { text: `⚡ TURBO ${Math.ceil(p.turboTimer)}s`, color: '#ffd700', bg: 'rgba(30, 22, 0, 0.92)' };
+      else if (effects.fireball > 0) badge = { text: `🔥 FIRE ${Math.ceil(effects.fireball)}s`, color: '#ff6600', bg: 'rgba(35, 12, 0, 0.92)' };
+      else if (effects.emp > 0) badge = { text: `⚡ EMP ${Math.ceil(effects.emp)}s`, color: '#c084fc', bg: 'rgba(25, 8, 40, 0.92)' };
+      else if (effects.shrink > 0) badge = { text: `🔻 -15% ${Math.ceil(effects.shrink)}s`, color: '#f43f5e', bg: 'rgba(35, 0, 12, 0.92)' };
+      else if (effects.guided > 0) badge = { text: `🎯 GUIDED`, color: '#00f0ff', bg: 'rgba(0, 25, 45, 0.92)' };
+      else if (effects.barrier > 0) badge = { text: `🛡️ DEFENSE ${Math.ceil(effects.barrier)}s`, color: '#00f0ff', bg: 'rgba(0, 25, 45, 0.92)' };
+      else if (effects.giant > 0) badge = { text: `📏 EXTEND`, color: '#00ff88', bg: 'rgba(0, 35, 18, 0.92)' };
+
+      if (badge) {
+        const labelX = isP1 ? pX + pW + 62 : pX - 62;
+        const labelY = pY + pH / 2;
+        ctx.save();
+        ctx.fillStyle = badge.bg;
+        ctx.strokeStyle = badge.color;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = badge.color;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(labelX - 52, labelY - 14, 104, 28, 6);
+        } else {
+          ctx.rect(labelX - 52, labelY - 14, 104, 28);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = badge.color;
+        ctx.font = 'bold 12px Orbitron';
         ctx.textAlign = 'center';
-        const labelX = isP1 ? pX + pW + 35 : pX - 35;
-        ctx.fillText(`⚡ TURBO ${Math.ceil(p.turboTimer)}s`, labelX, pY + pH / 2);
-      } else if (effects.fireball > 0) {
-        ctx.fillStyle = '#ff7700';
-        ctx.font = 'bold 10px Orbitron';
-        ctx.textAlign = 'center';
-        const labelX = isP1 ? pX + pW + 35 : pX - 35;
-        ctx.fillText(`🔥 FIRE ${Math.ceil(effects.fireball)}s`, labelX, pY + pH / 2);
-      } else if (effects.emp > 0) {
-        ctx.fillStyle = '#c084fc';
-        ctx.font = 'bold 10px Orbitron';
-        ctx.textAlign = 'center';
-        const labelX = isP1 ? pX + pW + 35 : pX - 35;
-        ctx.fillText(`⚡ EMP ${Math.ceil(effects.emp)}s`, labelX, pY + pH / 2);
-      } else if (effects.shrink > 0) {
-        ctx.fillStyle = '#f43f5e';
-        ctx.font = 'bold 10px Orbitron';
-        ctx.textAlign = 'center';
-        const labelX = isP1 ? pX + pW + 35 : pX - 35;
-        ctx.fillText(`🔻 -15% ${Math.ceil(effects.shrink)}s`, labelX, pY + pH / 2);
-      } else if (effects.guided > 0) {
-        ctx.fillStyle = '#00f0ff';
-        ctx.font = 'bold 10px Orbitron';
-        ctx.textAlign = 'center';
-        const labelX = isP1 ? pX + pW + 35 : pX - 35;
-        ctx.fillText(`🎯 GUIDED`, labelX, pY + pH / 2);
-      } else if (effects.barrier > 0) {
-        ctx.fillStyle = '#00f0ff';
-        ctx.font = 'bold 10px Orbitron';
-        ctx.textAlign = 'center';
-        const labelX = isP1 ? pX + pW + 35 : pX - 35;
-        ctx.fillText(`🛡️ DEFENSE ${Math.ceil(effects.barrier)}s`, labelX, pY + pH / 2);
-      } else if (effects.giant > 0) {
-        ctx.fillStyle = '#00ff88';
-        ctx.font = 'bold 10px Orbitron';
-        ctx.textAlign = 'center';
-        const labelX = isP1 ? pX + pW + 35 : pX - 35;
-        ctx.fillText(`📏 EXTEND`, labelX, pY + pH / 2);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(badge.text, labelX, labelY);
+        ctx.restore();
       }
 
       const pName = playerNames[slot] || (isP1 ? 'Player 1' : 'Player 2');
-      ctx.fillStyle = isCurrentPlayer ? '#ffffff' : 'rgba(255, 255, 255, 0.75)';
-      ctx.font = isCurrentPlayer ? 'bold 12px Orbitron' : '11px Orbitron';
+      ctx.fillStyle = isCurrentPlayer ? '#ffffff' : 'rgba(255, 255, 255, 0.85)';
+      ctx.font = isCurrentPlayer ? 'bold 14px Orbitron' : '12px Orbitron';
       ctx.textAlign = 'center';
-      ctx.fillText(pName, pX + pW / 2, Math.max(16, pY - 10));
+      ctx.fillText(pName, pX + pW / 2, Math.max(18, pY - 12));
 
       ctx.restore();
     });
@@ -752,20 +744,20 @@ class GameRenderer {
     items.forEach(item => {
       ctx.save();
       const pulse = Math.sin(time + item.x) * 2;
-      const r = item.radius + pulse;
+      const r = (item.radius || 16) + 4 + pulse; // Larger prominent 20-22px orb
 
       ctx.shadowColor = '#ffd700';
-      ctx.shadowBlur = 12;
-      ctx.fillStyle = 'rgba(16, 22, 40, 0.92)';
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = 'rgba(10, 16, 32, 0.95)';
       ctx.strokeStyle = '#ffd700';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
 
       ctx.beginPath();
       ctx.arc(item.x, item.y, r, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.font = '14px Orbitron';
+      ctx.font = 'bold 20px Orbitron';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       let icon = '⭐';

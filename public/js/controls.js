@@ -1,4 +1,4 @@
-﻿class ControlsManager {
+class ControlsManager {
   constructor(canvas, onInput) {
     this.canvas = canvas;
     this.onInput = onInput;
@@ -126,12 +126,14 @@
   }
 
   initTouch() {
+    let canvasTouchStart = 0;
     const handleTouch = (e) => {
       const now = Date.now();
-      if (now - this.lastTapTime < 300) {
-        this.isTurboRequested = true;
+      if (now - this.lastTapTime < 320) {
+        this.triggerTurbo();
       }
       this.lastTapTime = now;
+      canvasTouchStart = now;
 
       if (e.touches.length > 0) {
         const touch = e.touches[0];
@@ -148,7 +150,6 @@
               this.targetY = Math.max(10, Math.min(this.virtualHeight - 58, (1 - clampedRel) * this.virtualHeight - 29));
               this.updateThumbGlow(clampedRel);
             } else {
-              // P1: Left = 0, Right = 700
               this.targetY = Math.max(10, Math.min(this.virtualHeight - 58, clampedRel * this.virtualHeight - 29));
               this.updateThumbGlow(clampedRel);
             }
@@ -180,11 +181,9 @@
         if (this.viewMode === 'bottom') {
           const deltaX = (touch.clientX - this.lastTouchX) * (this.virtualHeight / rect.width);
           if (this.playerSlot === 'p2') {
-            // P2: Drag right -> decrease Y (move paddle right on screen)
             this.targetY = Math.max(10, Math.min(this.virtualHeight - 58, this.targetY - deltaX * 1.35));
             this.updateThumbGlow(1 - (this.targetY / this.virtualHeight));
           } else {
-            // P1: Drag right -> increase Y (move paddle right on screen!)
             this.targetY = Math.max(10, Math.min(this.virtualHeight - 58, this.targetY + deltaX * 1.35));
             this.updateThumbGlow(this.targetY / this.virtualHeight);
           }
@@ -209,27 +208,25 @@
       e.preventDefault();
     };
 
+    const handleTouchEnd = (e) => {
+      this.touchActive = false;
+      if (Date.now() - canvasTouchStart < 260) {
+        this.triggerTurbo();
+      }
+    };
+
     this.canvas.addEventListener('touchstart', handleTouch, { passive: false });
     this.canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    this.canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
   }
 
-  // Dedicated Bottom Control Touchpad Track
+  // Dedicated Full-Width Bottom Control Touchpad Track (Tap Anywhere for Turbo)
   initTouchpadZone() {
     const touchpadSlider = document.querySelector('.touchpad-slider');
-    const btnTouchpadTurbo = document.getElementById('btn-touchpad-turbo');
-
-    if (btnTouchpadTurbo) {
-      const trigger = (e) => {
-        this.triggerTurbo();
-        e.preventDefault();
-      };
-      btnTouchpadTurbo.addEventListener('click', trigger);
-      btnTouchpadTurbo.addEventListener('touchstart', trigger, { passive: false });
-    }
-
     if (!touchpadSlider) return;
 
     let padActive = false;
+    let padTouchStart = 0;
 
     const setPositionFromTouchpad = (clientX) => {
       const rect = touchpadSlider.getBoundingClientRect();
@@ -239,12 +236,9 @@
 
       if (this.viewMode === 'bottom') {
         if (this.playerSlot === 'p2') {
-          // P2: Left = 700, Right = 0
           this.targetY = Math.max(10, Math.min(this.virtualHeight - 58, (1 - clampedRel) * this.virtualHeight - 29));
           this.updateThumbGlow(clampedRel);
         } else {
-          // P1: Left (clampedRel = 0) = Y = 0 (paddle on LEFT of screen)
-          //     Right (clampedRel = 1) = Y = 700 (paddle on RIGHT of screen)
           this.targetY = Math.max(10, Math.min(this.virtualHeight - 58, clampedRel * this.virtualHeight - 29));
           this.updateThumbGlow(clampedRel);
         }
@@ -257,6 +251,7 @@
     const handlePadStart = (e) => {
       if (e.touches && e.touches.length > 0) {
         padActive = true;
+        padTouchStart = Date.now();
         setPositionFromTouchpad(e.touches[0].clientX);
       }
       e.preventDefault();
@@ -271,6 +266,10 @@
 
     const handlePadEnd = (e) => {
       padActive = false;
+      // Tap anywhere on track triggers Turbo!
+      if (Date.now() - padTouchStart < 260) {
+        this.triggerTurbo();
+      }
     };
 
     touchpadSlider.addEventListener('touchstart', handlePadStart, { passive: false });
@@ -279,6 +278,7 @@
 
     touchpadSlider.addEventListener('mousedown', (e) => {
       padActive = true;
+      padTouchStart = Date.now();
       setPositionFromTouchpad(e.clientX);
     });
 
@@ -289,6 +289,9 @@
     });
 
     window.addEventListener('mouseup', () => {
+      if (padActive && (Date.now() - padTouchStart < 260)) {
+        this.triggerTurbo();
+      }
       padActive = false;
     });
   }
