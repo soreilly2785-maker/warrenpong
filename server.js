@@ -734,10 +734,17 @@ class Room {
       ball.prevX = ball.x;
       ball.prevY = ball.y;
 
-      // 1. Magnus Effect: Ball Curvature from Paddle Spin Transfer
-      if (ball.spin) {
-        ball.vy += ball.spin * 0.28;
-        ball.spin *= 0.982;
+      // 1. Magnus Effect: Gentle Aerodynamic Heading Rotation (Speed-Preserving)
+      if (ball.spin && Math.abs(ball.spin) > 0.02) {
+        const spd = ball.speed || Math.hypot(ball.vx, ball.vy) || 8.5;
+        let heading = Math.atan2(ball.vy, Math.abs(ball.vx));
+        heading += ball.spin * 0.008; // Subtle smooth arc
+        heading = Math.max(-0.58, Math.min(0.58, heading)); // Max ~33 deg pitch
+
+        const dirX = Math.sign(ball.vx) || 1;
+        ball.vx = dirX * spd * Math.cos(heading);
+        ball.vy = spd * Math.sin(heading);
+        ball.spin *= 0.95;
         if (Math.abs(ball.spin) < 0.01) ball.spin = 0;
       }
 
@@ -750,14 +757,14 @@ class Room {
           const isMovingTowardOpponent = (ball.lastHitter === 'p1' && ball.vx > 0) || (ball.lastHitter === 'p2' && ball.vx < 0);
           
           if (isMovingTowardOpponent) {
-            // Highly responsive agile steering when attacking opponent
-            ball.vy += Math.sign(diffY) * Math.min(0.95, Math.abs(diffY) * 0.075);
+            // Responsive agile steering when attacking opponent
+            ball.vy += Math.sign(diffY) * Math.min(0.65, Math.abs(diffY) * 0.045);
           } else {
             // Predictable, gentle return lines on the way back
-            ball.vy += Math.sign(diffY) * Math.min(0.25, Math.abs(diffY) * 0.015);
+            ball.vy += Math.sign(diffY) * Math.min(0.20, Math.abs(diffY) * 0.015);
           }
-          if (Math.abs(ball.vy) > Math.abs(ball.vx) * 0.88) {
-            ball.vy = Math.sign(ball.vy) * Math.abs(ball.vx) * 0.88;
+          if (Math.abs(ball.vy) > Math.abs(ball.vx) * 0.70) {
+            ball.vy = Math.sign(ball.vy) * Math.abs(ball.vx) * 0.70;
           }
         }
       }
@@ -772,16 +779,16 @@ class Room {
         }
       }
 
-      // Walls
+      // Walls: Clean shallow bounces, immediately extinguish spin
       if (ball.y - ball.radius <= 10) {
         ball.y = 10 + ball.radius;
         ball.vy = Math.abs(ball.vy);
-        if (ball.spin) ball.spin *= -0.5;
+        ball.spin = 0; // Impact stops spinning
         this.game.events.push({ type: 'wall_bounce', x: ball.x, y: ball.y });
       } else if (ball.y + ball.radius >= ARENA_HEIGHT - 10) {
         ball.y = ARENA_HEIGHT - 10 - ball.radius;
         ball.vy = -Math.abs(ball.vy);
-        if (ball.spin) ball.spin *= -0.5;
+        ball.spin = 0; // Impact stops spinning
         this.game.events.push({ type: 'wall_bounce', x: ball.x, y: ball.y });
       }
 
@@ -961,24 +968,24 @@ class Room {
       paddle.charge = Math.min(100, paddle.charge + 25);
     }
 
-    // 2. Classic Balanced Paddle Deflection Angle
+    // 2. Direct Court-Driving Paddle Deflection Angle (Max ~35 degrees)
+    // Ensures vx is heavily dominant so rallies drive across the court without ping-ponging into walls
     const relativeHitY = (ball.y - (paddle.y + paddle.height / 2)) / (paddle.height / 2);
-    const clampedHit = Math.max(-0.88, Math.min(0.88, relativeHitY));
-    const bounceAngle = clampedHit * (Math.PI / 3.2);
+    const clampedHit = Math.max(-0.85, Math.min(0.85, relativeHitY));
+    const maxAngle = Math.PI / 5.1; // ~35.3 degrees max
+    const bounceAngle = clampedHit * maxAngle;
 
     // 3. Paddle Motion -> Ball Spin Transfer (Magnus Effect)
-    // Inverted spin: moving paddle up curves ball down, moving paddle down curves ball up (realistic counter-friction)
-    // When Fireball is active, spin is amplified 3x for dramatic, controllable bending curveballs!
+    // Normalized spin value (-1.0 to 1.0)
     const hasGuided = (paddle.activeEffects.guided > 0);
     const hasFireball = (paddle.activeEffects.fireball > 0);
     const hasEmp = (paddle.activeEffects.emp > 0);
     const isTurboActive = (paddle.turboTimer > 0);
 
     const paddleVy = paddle.vy || 0;
-    const spinMultiplier = hasFireball ? 3.0 : 1.0;
-    const maxSpinLimit = hasFireball ? 7.5 : 2.5;
-    const spinTransfer = -Math.max(-maxSpinLimit, Math.min(maxSpinLimit, paddleVy * 0.045 * spinMultiplier));
-    ball.spin = (ball.spin || 0) * 0.2 + spinTransfer;
+    const spinMultiplier = hasFireball ? 2.5 : 1.0;
+    const normalizedPaddleSpeed = Math.max(-1.0, Math.min(1.0, paddleVy / 300));
+    ball.spin = -normalizedPaddleSpeed * spinMultiplier;
 
     let speed = ball.speed || 8.5;
     if (isTurboActive) {

@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Revert paddle shape to sleek cyberpunk capsule, restore classic bounce angles, and invert spin curve direction',
+    message: 'Fix wall bouncing: speed-conserving angular spin heading, direct 35deg max paddle angles, and kill spin on wall hits',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with v2.9 paddle shape & spin fix!');
+  console.log('GitHub updated successfully with v3.0 physics fix!');
 })();
