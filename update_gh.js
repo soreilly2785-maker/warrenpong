@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Remove redundant header icons, optimize rendering pipelines, and add GPU acceleration (v3.2)',
+    message: 'Implement deadzone and progressive non-linear power curve for analog spin scaling (v3.3)',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with v3.2 performance optimizations!');
+  console.log('GitHub updated successfully with v3.3 analog spin dynamics!');
 })();

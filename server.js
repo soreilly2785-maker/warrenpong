@@ -976,16 +976,27 @@ class Room {
     const bounceAngle = clampedHit * maxAngle;
 
     // 3. Paddle Motion -> Ball Spin Transfer (Magnus Effect)
-    // Normalized spin value (-1.0 to 1.0)
+    // Non-linear power curve with deadzone:
+    // - Barely moving (|paddleVy| < 45 px/s) -> ZERO spin (ball flies completely straight and true)
+    // - Fast intentional swipes scale progressively up to intense bending curves!
     const hasGuided = (paddle.activeEffects.guided > 0);
     const hasFireball = (paddle.activeEffects.fireball > 0);
     const hasEmp = (paddle.activeEffects.emp > 0);
     const isTurboActive = (paddle.turboTimer > 0);
 
     const paddleVy = paddle.vy || 0;
-    const spinMultiplier = hasFireball ? 2.8 : 1.3;
-    const normalizedPaddleSpeed = Math.max(-1.0, Math.min(1.0, paddleVy / 200));
-    ball.spin = -normalizedPaddleSpeed * spinMultiplier;
+    const absVy = Math.abs(paddleVy);
+    const deadzone = 45; // px/sec deadzone
+    
+    let rawSpin = 0;
+    if (absVy > deadzone) {
+      const activeSpeed = absVy - deadzone;
+      const progress = Math.min(1.6, Math.pow(activeSpeed / 350, 1.4));
+      rawSpin = Math.sign(paddleVy) * progress;
+    }
+
+    const spinMultiplier = hasFireball ? 2.5 : 1.0;
+    ball.spin = -rawSpin * spinMultiplier;
 
     let speed = ball.speed || 8.5;
     if (isTurboActive) {
