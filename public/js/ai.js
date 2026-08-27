@@ -306,22 +306,26 @@ class LocalGameSimulator {
 
     // Player 1 Paddle
     const p1 = this.state.paddles.p1;
+    const p1PrevY = p1.y;
     p1.y += (p1.targetY - p1.y) * 0.45;
+    p1.vy = (p1.y - p1PrevY) * 60;
 
     // Player 2 Paddle (Snappier, faster speed + realistic human tracking)
     const p2 = this.state.paddles.p2;
+    const p2PrevY = p2.y;
     if (this.isMultiplayer) {
       p2.y += (p2.targetY - p2.y) * 0.45;
     } else {
       const diff = p2.targetY - p2.y;
       const isFastPhase = this.state.isSuddenDeath || p2.turboTimer > 0;
-      const aiMaxSpeed = isFastPhase ? 6.8 : 5.6; // Increased from 4.2 for snappier agility
+      const aiMaxSpeed = isFastPhase ? 6.8 : 5.6; // Agility
       if (Math.abs(diff) < aiMaxSpeed) {
         p2.y = p2.targetY;
       } else {
         p2.y += Math.sign(diff) * aiMaxSpeed;
       }
     }
+    p2.vy = (p2.y - p2PrevY) * 60;
 
     ['p1', 'p2'].forEach(slot => {
       const p = this.state.paddles[slot];
@@ -383,24 +387,30 @@ class LocalGameSimulator {
       ball.prevX = ball.x;
       ball.prevY = ball.y;
 
-      // Curving arc only on Fireballs!
-      if (ball.type === 'fireball') {
-        ball.curvePhase = (ball.curvePhase || 0) + 0.09;
-        ball.vy += Math.sin(ball.curvePhase) * 0.7 * (ball.curveDir || 1);
-        if (Math.abs(ball.vy) > Math.abs(ball.vx) * 0.9) {
-          ball.vy = Math.sign(ball.vy) * Math.abs(ball.vx) * 0.9;
-        }
+      // 1. Magnus Effect: Ball Curvature from Paddle Spin Transfer
+      if (ball.spin) {
+        ball.vy += ball.spin * 0.28;
+        ball.spin *= 0.982;
+        if (Math.abs(ball.spin) < 0.01) ball.spin = 0;
       }
 
-      // Real-time remote steering on Guided Ball!
+      // 2. Real-time Direction-Aware Remote Steering on Guided Ball
       if (ball.type === 'guided' && ball.lastHitter) {
         const ownerPaddle = this.state.paddles[ball.lastHitter];
         if (ownerPaddle) {
           const steerTargetY = ownerPaddle.y + ownerPaddle.height / 2;
           const diffY = steerTargetY - ball.y;
-          ball.vy += Math.sign(diffY) * Math.min(0.55, Math.abs(diffY) * 0.035);
-          if (Math.abs(ball.vy) > Math.abs(ball.vx) * 0.85) {
-            ball.vy = Math.sign(ball.vy) * Math.abs(ball.vx) * 0.85;
+          const isMovingTowardOpponent = (ball.lastHitter === 'p1' && ball.vx > 0) || (ball.lastHitter === 'p2' && ball.vx < 0);
+          
+          if (isMovingTowardOpponent) {
+            // Highly responsive agile steering when attacking opponent
+            ball.vy += Math.sign(diffY) * Math.min(0.95, Math.abs(diffY) * 0.075);
+          } else {
+            // Predictable, gentle return lines on the way back
+            ball.vy += Math.sign(diffY) * Math.min(0.25, Math.abs(diffY) * 0.015);
+          }
+          if (Math.abs(ball.vy) > Math.abs(ball.vx) * 0.88) {
+            ball.vy = Math.sign(ball.vy) * Math.abs(ball.vx) * 0.88;
           }
         }
       }
@@ -417,11 +427,13 @@ class LocalGameSimulator {
       if (ball.y - ball.radius <= 10) {
         ball.y = 10 + ball.radius;
         ball.vy = Math.abs(ball.vy);
+        if (ball.spin) ball.spin *= -0.5;
         this.sound.playWallBounce();
         this.renderer.addSparkles(ball.x, ball.y, '#00f0ff', 5);
       } else if (ball.y + ball.radius >= ARENA_HEIGHT - 10) {
         ball.y = ARENA_HEIGHT - 10 - ball.radius;
         ball.vy = -Math.abs(ball.vy);
+        if (ball.spin) ball.spin *= -0.5;
         this.sound.playWallBounce();
         this.renderer.addSparkles(ball.x, ball.y, '#00f0ff', 5);
       }
@@ -509,12 +521,16 @@ class LocalGameSimulator {
           this.sound.playBrickHit(!brick.alive, brick.type === 'core', this.state.paddles[hitter].combo);
           this.renderer.addSparkles(nearestX, nearestY, brick.owner === 'p1' ? '#00f0ff' : '#ff0077', 8);
 
-          if (ball.type !== 'fireball') {
-            const overlapX = (brick.w / 2 + ball.radius) - Math.abs(ball.x - (brick.x + brick.w / 2));
-            const overlapY = (brick.h / 2 + ball.radius) - Math.abs(ball.y - (brick.y + brick.h / 2));
-            if (overlapX < overlapY) ball.vx = -ball.vx;
-            else ball.vy = -ball.vy;
+          // Fireball breaks 1 brick with 2 damage, then consumes flame & reverts to normal ball
+          if (ball.type === 'fireball') {
+            ball.type = 'normal';
           }
+
+          const overlapX = (brick.w / 2 + ball.radius) - Math.abs(ball.x - (brick.x + brick.w / 2));
+          const overlapY = (brick.h / 2 + ball.radius) - Math.abs(ball.y - (brick.y + brick.h / 2));
+          if (overlapX < overlapY) ball.vx = -ball.vx;
+          else ball.vy = -ball.vy;
+          if (ball.spin) ball.spin *= -0.5;
 
           this.checkWinCondition();
           break;
@@ -549,7 +565,7 @@ class LocalGameSimulator {
   }
 
   handlePaddleHit(ball, paddle, slot, isSuddenDeath = false) {
-    // If incoming ball was electrified by opponent, shrink this paddle by 15% (10s duration)
+    // 1. EMP Shock: If incoming ball was electrified by opponent, reliably shrink this paddle by 15% (10s duration)
     if (ball.type === 'emp' && ball.lastHitter && ball.lastHitter !== slot) {
       paddle.activeEffects.shrink = 10;
       if (paddle.activeEffects.giant <= 0) {
@@ -558,6 +574,7 @@ class LocalGameSimulator {
       if (this.sound.playEMPShock) this.sound.playEMPShock();
       this.renderer.addExplosion(ball.x, ball.y, 40, '#a855f7');
       this.renderer.addFloatingText('⚡ 15% PADDLE SHRINK!', ball.x, ball.y, '#c084fc', 18);
+      ball.type = 'normal'; // Consumed on impact
     }
 
     ball.lastHitter = slot;
@@ -566,14 +583,25 @@ class LocalGameSimulator {
       paddle.charge = Math.min(100, paddle.charge + 25);
     }
 
+    // 2. Baguette Curved Surface Normal & Incident Reflection Angle
     const relativeHit = (ball.y - (paddle.y + paddle.height / 2)) / (paddle.height / 2);
-    const clampedHit = Math.max(-0.88, Math.min(0.88, relativeHit));
-    const bounceAngle = clampedHit * (Math.PI / 3.2);
+    const clampedHit = Math.max(-0.9, Math.min(0.9, relativeHit));
+    const surfaceNormalAngle = clampedHit * (Math.PI / 4.5); // ~40 deg at baguette tips
+    const incidentAngle = Math.atan2(ball.vy, Math.abs(ball.vx));
+    const bounceAngle = Math.max(-1.22, Math.min(1.22, 0.70 * surfaceNormalAngle + 0.30 * incidentAngle));
 
+    // 3. Paddle Motion -> Ball Spin Transfer (Magnus Effect)
+    // When Fireball is active, spin is amplified 3x for dramatic, controllable bending curveballs!
     const hasGuided = (paddle.activeEffects.guided > 0);
     const hasFireball = (paddle.activeEffects.fireball > 0);
     const hasEmp = (paddle.activeEffects.emp > 0);
     const isTurboActive = (paddle.turboTimer > 0);
+
+    const paddleVy = paddle.vy || 0;
+    const spinMultiplier = hasFireball ? 3.0 : 1.0;
+    const maxSpinLimit = hasFireball ? 7.5 : 2.5;
+    const spinTransfer = Math.max(-maxSpinLimit, Math.min(maxSpinLimit, paddleVy * 0.045 * spinMultiplier));
+    ball.spin = (ball.spin || 0) * 0.2 + spinTransfer;
 
     let speed = ball.speed || 8.5;
     if (isTurboActive) {
@@ -587,8 +615,7 @@ class LocalGameSimulator {
     if (hasFireball) {
       ball.type = 'fireball';
       ball.typeTimer = 8;
-      ball.curveDir = (Math.random() > 0.5 ? 1 : -1);
-      ball.curvePhase = 0;
+      speed = Math.min(speed, 15.0); // Balanced speed cap for Fireball
       this.sound.playPaddleHit(true, paddle.combo);
       this.renderer.addExplosion(ball.x, ball.y, 40, '#ff4500');
     } else if (hasGuided) {
@@ -600,13 +627,13 @@ class LocalGameSimulator {
     } else if (hasEmp) {
       ball.type = 'emp';
       ball.typeTimer = 8;
-      if (this.sound.playEMPShock) this.sound.playEMPShock();
-      this.renderer.addSparkles(ball.x, ball.y, '#c084fc', 14);
-      this.renderer.addFloatingText('⚡ EMP ELECTRIFIED!', ball.x, ball.y, '#a855f7', 16);
+      this.sound.playPaddleHit(false, paddle.combo);
+      this.renderer.addExplosion(ball.x, ball.y, 35, '#c084fc');
+      this.renderer.addFloatingText('⚡ EMP ELECTRIFIED!', ball.x, ball.y, '#c084fc', 16);
     } else {
       ball.type = 'normal';
       ball.typeTimer = 0;
-      this.sound.playPaddleHit(false, paddle.combo);
+      this.sound.playPaddleHit(isTurboActive, paddle.combo);
       this.renderer.addSparkles(ball.x, ball.y, slot === 'p1' ? '#00f0ff' : '#ff0077', 8);
     }
 

@@ -500,11 +500,41 @@ class GameRenderer {
       }
 
       ctx.lineWidth = 2.5;
-      ctx.fillRect(pX, pY, pW, pH);
-      ctx.strokeRect(pX, pY, pW, pH);
 
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(pX + pW / 2 - 1.5, pY + 6, 3, pH - 12);
+      // Draw Gentle Baguette-Shaped Curved Paddle
+      const bulge = 5; // convex arc bulging outward toward arena center
+      const r = Math.min(pW / 2, 7); // smoothly rounded tips
+
+      ctx.beginPath();
+      if (isP1) {
+        // P1: Left paddle, front convex face on the right (facing arena center)
+        ctx.moveTo(pX, pY + r);
+        ctx.arcTo(pX, pY, pX + pW, pY, r);
+        // Front curved arc bowing outwards to the right
+        ctx.quadraticCurveTo(pX + pW + bulge, pY + pH / 2, pX + pW, pY + pH);
+        ctx.arcTo(pX, pY + pH, pX, pY + pH - r, r);
+        ctx.lineTo(pX, pY + r);
+      } else {
+        // P2: Right paddle, front convex face on the left (facing arena center)
+        ctx.moveTo(pX + pW, pY + r);
+        ctx.arcTo(pX + pW, pY, pX, pY, r);
+        // Front curved arc bowing outwards to the left
+        ctx.quadraticCurveTo(pX - bulge, pY + pH / 2, pX, pY + pH);
+        ctx.arcTo(pX + pW, pY + pH, pX + pW, pY + pH - r, r);
+        ctx.lineTo(pX + pW, pY + r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Glowing curved spine
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const spineX = isP1 ? pX + pW / 2 - 1 : pX + pW / 2 + 1;
+      ctx.moveTo(spineX, pY + 8);
+      ctx.quadraticCurveTo(spineX + (isP1 ? 2.5 : -2.5), pY + pH / 2, spineX, pY + pH - 8);
+      ctx.stroke();
 
       if (isTurboActive) {
         ctx.fillStyle = '#ffd700';
@@ -686,6 +716,34 @@ class GameRenderer {
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
       ctx.fill();
+
+      // Spin Rotation Ticks / Aerodynamic Vortex Aura
+      if (ball.spin && Math.abs(ball.spin) > 0.15) {
+        ctx.save();
+        const spinAngle = (ball.spinAngle = ((ball.spinAngle || 0) + ball.spin * 0.35) % (Math.PI * 2));
+        ctx.translate(ball.x, ball.y);
+        ctx.rotate(spinAngle);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.radius * 0.65, 0, Math.PI * 1.2);
+        ctx.stroke();
+        ctx.restore();
+
+        if (Math.random() < 0.25) {
+          this.particles.push({
+            x: ball.x + (Math.random() * 6 - 3),
+            y: ball.y + (Math.random() * 6 - 3),
+            vx: -ball.vx * 0.1 + (Math.random() * 1.5 - 0.75),
+            vy: (ball.spin > 0 ? 1 : -1) * (Math.random() * 2 + 1),
+            size: 2,
+            color: glowColor,
+            alpha: 0.75,
+            decay: 0.08,
+            shape: 'spark'
+          });
+        }
+      }
 
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();

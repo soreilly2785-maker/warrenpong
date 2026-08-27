@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Add Quick Match Radar (waiting alerts), Top 5 Leaderboard, and Head-to-Head rivalry tracker',
+    message: 'Implement baguette curved paddles, spin physics, 3x Fireball curve amp, EMP fix, and responsive string control',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with Leaderboard, Radar & H2H!');
+  console.log('GitHub updated successfully with v2.8 physics, spin & balance!');
 })();
