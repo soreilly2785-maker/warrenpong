@@ -387,17 +387,17 @@ class LocalGameSimulator {
       ball.prevX = ball.x;
       ball.prevY = ball.y;
 
-      // 1. Magnus Effect: Gentle Aerodynamic Heading Rotation (Speed-Preserving)
+      // 1. Magnus Effect: Longer-Lasting Aerodynamic Heading Curve (Speed-Preserving)
       if (ball.spin && Math.abs(ball.spin) > 0.02) {
         const spd = ball.speed || Math.hypot(ball.vx, ball.vy) || 8.5;
         let heading = Math.atan2(ball.vy, Math.abs(ball.vx));
-        heading += ball.spin * 0.008; // Subtle smooth arc
-        heading = Math.max(-0.58, Math.min(0.58, heading)); // Max ~33 deg pitch
+        heading += ball.spin * 0.015; // More expressive curve bend
+        heading = Math.max(-0.64, Math.min(0.64, heading)); // Max ~36.6 deg pitch
 
         const dirX = Math.sign(ball.vx) || 1;
         ball.vx = dirX * spd * Math.cos(heading);
         ball.vy = spd * Math.sin(heading);
-        ball.spin *= 0.95;
+        ball.spin *= 0.98; // Longer lasting curve sustain across the full court
         if (Math.abs(ball.spin) < 0.01) ball.spin = 0;
       }
 
@@ -605,8 +605,8 @@ class LocalGameSimulator {
     const isTurboActive = (paddle.turboTimer > 0);
 
     const paddleVy = paddle.vy || 0;
-    const spinMultiplier = hasFireball ? 2.5 : 1.0;
-    const normalizedPaddleSpeed = Math.max(-1.0, Math.min(1.0, paddleVy / 300));
+    const spinMultiplier = hasFireball ? 2.8 : 1.3;
+    const normalizedPaddleSpeed = Math.max(-1.0, Math.min(1.0, paddleVy / 200));
     ball.spin = -normalizedPaddleSpeed * spinMultiplier;
 
     let speed = ball.speed || 8.5;

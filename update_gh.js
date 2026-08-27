@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Fix wall bouncing: speed-conserving angular spin heading, direct 35deg max paddle angles, and kill spin on wall hits',
+    message: 'Enhance spin curve strength and duration sustain across full court (v3.1)',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with v3.0 physics fix!');
+  console.log('GitHub updated successfully with v3.1 enhanced spin curve!');
 })();
