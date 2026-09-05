@@ -42,7 +42,7 @@ function ghRequest(endpoint, method, data) {
 function getAllFiles(dirPath, arrayOfFiles = []) {
   const files = fs.readdirSync(dirPath);
   files.forEach(file => {
-    if (file === 'node_modules' || file === '.git' || file === 'functions') return;
+    if (file === 'node_modules' || file === '.git' || file === '.wrangler') return;
     const fullPath = path.join(dirPath, file);
     if (fs.statSync(fullPath).isDirectory()) {
       getAllFiles(fullPath, arrayOfFiles);
@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Persistent cross-session leaderboard & empowered Fireball S-curve direction shifts (v3.5)',
+    message: 'Global persistent Cloudflare KV Edge leaderboard with zero-login worldwide sync',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with v3.5 persistent leaderboard & empowered Fireball!');
+  console.log('GitHub updated successfully with Cloudflare KV Edge global leaderboard!');
 })();

@@ -214,8 +214,45 @@ function initApp() {
     try { localStorage.setItem('wp_leaderboard', JSON.stringify(top5)); } catch (e) {}
     renderLeaderboard(top5);
 
+    // Sync to Cloudflare KV Edge (Global persistent store)
+    postCloudflareGameResult(winnerName, loserName);
+
     if (socket && socket.connected) {
       socket.emit('record_game_result', { winnerName, loserName });
+    }
+  }
+
+  const CLOUDFLARE_API_URL = 'https://warrenpong.pages.dev/api/leaderboard';
+
+  async function fetchCloudflareLeaderboard() {
+    try {
+      const res = await fetch(CLOUDFLARE_API_URL);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.top5) {
+          mergeServerLeaderboard(data.top5);
+        }
+      }
+    } catch (e) {
+      console.warn('Cloudflare KV leaderboard fetch skipped:', e);
+    }
+  }
+
+  async function postCloudflareGameResult(winnerName, loserName) {
+    try {
+      const res = await fetch(CLOUDFLARE_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ winnerName, loserName })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.top5) {
+          mergeServerLeaderboard(data.top5);
+        }
+      }
+    } catch (e) {
+      console.warn('Cloudflare KV game record post skipped:', e);
     }
   }
 
@@ -425,8 +462,10 @@ function initApp() {
     });
     renderLeaderboard(loadLocalLeaderboard());
     updateCareerBadge(null);
+    fetchCloudflareLeaderboard();
   } else {
     renderLeaderboard(loadLocalLeaderboard());
+    fetchCloudflareLeaderboard();
   }
 
   function getPlayerName() {
