@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Global persistent Cloudflare KV Edge leaderboard with zero-login worldwide sync',
+    message: 'Prioritize Head-to-Head (H2H) rivalries for current player with dedicated tabs (v3.6)',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with Cloudflare KV Edge global leaderboard!');
+  console.log('GitHub updated successfully with v3.6 prioritized H2H rivalries!');
 })();

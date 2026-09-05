@@ -18,7 +18,7 @@
     <header id="game-header">
       <div class="logo-group">
         <span class="logo-icon">⚡</span>
-        <span class="logo-text">WARREN<span class="highlight">PONG</span> <span style="font-size:0.65rem; opacity:0.6; font-weight:normal; letter-spacing:0;">v3.5</span></span>
+        <span class="logo-text">WARREN<span class="highlight">PONG</span> <span style="font-size:0.65rem; opacity:0.6; font-weight:normal; letter-spacing:0;">v3.6</span></span>
       </div>
       <div class="header-controls">
         <button id="btn-sound" class="icon-btn" title="Toggle Sound">
@@ -79,19 +79,44 @@
             </button>
           </div>
 
-          <!-- LEADERBOARD CARD -->
+          <!-- LEADERBOARD & H2H RIVALRIES CARD -->
           <div class="leaderboard-card">
             <div class="leaderboard-header">
-              <div class="leaderboard-title">
-                <span class="leaderboard-icon">🏆</span>
-                <span>TOP 5 CHAMPIONS</span>
+              <div class="leaderboard-tabs">
+                <button id="tab-h2h" class="lb-tab active" title="View your Head-to-Head rivalries">
+                  <span>⚔️ MY RIVALS (H2H)</span>
+                </button>
+                <button id="tab-global" class="lb-tab" title="View global top champions">
+                  <span>🏆 GLOBAL TOP 5</span>
+                </button>
               </div>
               <div id="player-career-badge" class="career-badge">
                 <span class="career-label">MY CAREER:</span>
                 <strong id="career-record">0W - 0L</strong>
               </div>
             </div>
-            <div class="leaderboard-table-wrap">
+
+            <!-- VIEW 1: MY RIVALS (H2H) - PRIORITIZED BY DEFAULT -->
+            <div id="view-h2h" class="leaderboard-table-wrap">
+              <table class="leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>OPPONENT</th>
+                    <th>MY SCORE (W - L)</th>
+                    <th>WIN %</th>
+                    <th>RIVALRY STATUS</th>
+                  </tr>
+                </thead>
+                <tbody id="h2h-body">
+                  <tr>
+                    <td colspan="4" class="empty-leaderboard">No rivalry matches recorded yet. Play a match to start!</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- VIEW 2: GLOBAL TOP 5 -->
+            <div id="view-global" class="leaderboard-table-wrap hidden">
               <table class="leaderboard-table">
                 <thead>
                   <tr>
@@ -354,13 +379,13 @@
 
   </div>
 
-  <!-- CACHE-BUSTED SCRIPTS (v=3.5) -->
-  <script src="js/socket.io.min.js?v=3.5"></script>
-  <script src="js/qrcode.min.js?v=3.5"></script>
-  <script src="js/audio.js?v=3.5"></script>
-  <script src="js/renderer.js?v=3.5"></script>
-  <script src="js/controls.js?v=3.5"></script>
-  <script src="js/ai.js?v=3.5"></script>
-  <script src="js/main.js?v=3.5"></script>
+  <!-- CACHE-BUSTED SCRIPTS (v=3.6) -->
+  <script src="js/socket.io.min.js?v=3.6"></script>
+  <script src="js/qrcode.min.js?v=3.6"></script>
+  <script src="js/audio.js?v=3.6"></script>
+  <script src="js/renderer.js?v=3.6"></script>
+  <script src="js/controls.js?v=3.6"></script>
+  <script src="js/ai.js?v=3.6"></script>
+  <script src="js/main.js?v=3.6"></script>
 </body>
 </html>

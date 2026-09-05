@@ -1135,17 +1135,69 @@ input[type="text"] {
   margin-bottom: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding-bottom: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.leaderboard-title {
+.leaderboard-tabs {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lb-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
   font-family: var(--font-display);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 800;
-  color: #ffd700;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.lb-tab:hover {
+  color: #fff;
+}
+
+.lb-tab.active {
+  background: rgba(0, 240, 255, 0.2);
+  color: var(--cyan-glow);
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+}
+
+.rivalry-chip {
+  font-weight: 700;
+  font-size: 0.68rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.rivalry-chip.leading {
+  background: rgba(16, 185, 129, 0.18);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.rivalry-chip.tied {
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.rivalry-chip.trailing {
+  background: rgba(244, 63, 94, 0.18);
+  color: #f43f5e;
+  border: 1px solid rgba(244, 63, 94, 0.4);
 }
 
 .career-badge {

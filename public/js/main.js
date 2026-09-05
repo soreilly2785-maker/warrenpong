@@ -76,6 +76,11 @@ function initApp() {
   // Leaderboard & H2H UI
   const radarBadge = document.getElementById('radar-badge');
   const quickPlaySubtext = document.getElementById('quick-play-subtext');
+  const tabH2H = document.getElementById('tab-h2h');
+  const tabGlobal = document.getElementById('tab-global');
+  const viewH2H = document.getElementById('view-h2h');
+  const viewGlobal = document.getElementById('view-global');
+  const h2hBody = document.getElementById('h2h-body');
   const leaderboardBody = document.getElementById('leaderboard-body');
   const careerRecord = document.getElementById('career-record');
   const roomH2hBanner = document.getElementById('room-h2h-banner');
@@ -115,37 +120,25 @@ function initApp() {
     return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
   }
 
-  // --- PERSISTENT LEADERBOARD (PERSISTS ACROSS SESSIONS & COLD-STARTS) ---
-  const DEFAULT_LEADERBOARD = [
-    { name: 'NeonStriker', wins: 18, losses: 4, totalGames: 22, winRate: 82, streak: 5 },
-    { name: 'CyberAce', wins: 14, losses: 5, totalGames: 19, winRate: 74, streak: 3 },
-    { name: 'Vortex', wins: 11, losses: 4, totalGames: 15, winRate: 73, streak: 2 },
-    { name: 'Viper', wins: 8, losses: 6, totalGames: 14, winRate: 57, streak: 1 },
-    { name: 'Nova', wins: 6, losses: 5, totalGames: 11, winRate: 55, streak: 0 }
-  ];
-
+  // --- PERSISTENT LEADERBOARD & H2H RIVALRY ENGINE ---
   function getLocalPlayersMap() {
     try {
       const raw = localStorage.getItem('wp_players_map');
       if (raw) return JSON.parse(raw);
     } catch (e) {}
-    const map = {};
-    DEFAULT_LEADERBOARD.forEach(p => {
-      map[p.name] = {
-        wins: p.wins,
-        losses: p.losses,
-        totalGames: p.totalGames,
-        streak: p.streak,
-        bestStreak: p.streak,
-        lastPlayed: Date.now()
-      };
-    });
-    try { localStorage.setItem('wp_players_map', JSON.stringify(map)); } catch (e) {}
-    return map;
+    return {};
+  }
+
+  function getLocalH2HMap() {
+    try {
+      const raw = localStorage.getItem('wp_h2h_map');
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return {};
   }
 
   function getTop5FromMap(playersMap) {
-    const list = Object.entries(playersMap).map(([name, data]) => {
+    const list = Object.entries(playersMap || {}).map(([name, data]) => {
       const wins = data.wins || 0;
       const losses = data.losses || 0;
       const total = data.totalGames || (wins + losses);
@@ -187,9 +180,10 @@ function initApp() {
   function recordGameResultLocally(winnerName, loserName) {
     if (!winnerName || !loserName || winnerName === loserName || winnerName === 'Draw') return;
     const map = getLocalPlayersMap();
+    const h2hMap = getLocalH2HMap();
     const now = Date.now();
 
-    // Winner
+    // Winner Player Stats
     if (!map[winnerName]) {
       map[winnerName] = { wins: 0, losses: 0, totalGames: 0, streak: 0, bestStreak: 0, lastPlayed: now };
     }
@@ -199,7 +193,7 @@ function initApp() {
     map[winnerName].bestStreak = Math.max(map[winnerName].bestStreak || 0, map[winnerName].streak);
     map[winnerName].lastPlayed = now;
 
-    // Loser
+    // Loser Player Stats
     if (!map[loserName]) {
       map[loserName] = { wins: 0, losses: 0, totalGames: 0, streak: 0, bestStreak: 0, lastPlayed: now };
     }
@@ -210,9 +204,21 @@ function initApp() {
 
     try { localStorage.setItem('wp_players_map', JSON.stringify(map)); } catch (e) {}
 
+    // Head-to-Head Pair Stats
+    const pairKey = [winnerName, loserName].sort().join(':::');
+    if (!h2hMap[pairKey]) {
+      h2hMap[pairKey] = { [winnerName]: 0, [loserName]: 0, totalGames: 0 };
+    }
+    h2hMap[pairKey][winnerName] = (h2hMap[pairKey][winnerName] || 0) + 1;
+    if (h2hMap[pairKey][loserName] === undefined) h2hMap[pairKey][loserName] = 0;
+    h2hMap[pairKey].totalGames = (h2hMap[pairKey].totalGames || 0) + 1;
+
+    try { localStorage.setItem('wp_h2h_map', JSON.stringify(h2hMap)); } catch (e) {}
+
     const top5 = getTop5FromMap(map);
     try { localStorage.setItem('wp_leaderboard', JSON.stringify(top5)); } catch (e) {}
     renderLeaderboard(top5);
+    renderH2HLeaderboard(h2hMap);
 
     // Sync to Cloudflare KV Edge (Global persistent store)
     postCloudflareGameResult(winnerName, loserName);
@@ -232,6 +238,12 @@ function initApp() {
         if (data && data.top5) {
           mergeServerLeaderboard(data.top5);
         }
+        if (data && data.h2h) {
+          const localH2H = getLocalH2HMap();
+          const mergedH2H = { ...localH2H, ...data.h2h };
+          try { localStorage.setItem('wp_h2h_map', JSON.stringify(mergedH2H)); } catch (e) {}
+          renderH2HLeaderboard(mergedH2H);
+        }
       }
     } catch (e) {
       console.warn('Cloudflare KV leaderboard fetch skipped:', e);
@@ -249,6 +261,12 @@ function initApp() {
         const data = await res.json();
         if (data && data.top5) {
           mergeServerLeaderboard(data.top5);
+        }
+        if (data && data.h2h) {
+          const localH2H = getLocalH2HMap();
+          const mergedH2H = { ...localH2H, ...data.h2h };
+          try { localStorage.setItem('wp_h2h_map', JSON.stringify(mergedH2H)); } catch (e) {}
+          renderH2HLeaderboard(mergedH2H);
         }
       }
     } catch (e) {
@@ -306,6 +324,63 @@ function initApp() {
       const wr = total > 0 ? Math.round((localWins / total) * 100) : 0;
       careerRecord.textContent = `${localWins}W - ${localLosses}L${total > 0 ? ` (${wr}%)` : ''}`;
     }
+  }
+
+  function renderH2HLeaderboard(externalH2H) {
+    if (!h2hBody) return;
+    const myName = getPlayerName();
+    const h2hMap = externalH2H || getLocalH2HMap();
+
+    const rivals = [];
+    for (const [pairKey, record] of Object.entries(h2hMap || {})) {
+      const parts = pairKey.split(':::');
+      if (parts.some(p => p.toLowerCase() === myName.toLowerCase())) {
+        const isFirst = parts[0].toLowerCase() === myName.toLowerCase();
+        const oppName = isFirst ? parts[1] : parts[0];
+        const myWins = record[myName] || (isFirst ? record[parts[0]] : record[parts[1]]) || 0;
+        const oppWins = record[oppName] || (isFirst ? record[parts[1]] : record[parts[0]]) || 0;
+        const total = record.totalGames || (myWins + oppWins);
+        const winRate = total > 0 ? Math.round((myWins / total) * 100) : 0;
+        let status = 'tied';
+        let statusText = '🔥 Tied';
+        if (myWins > oppWins) {
+          status = 'leading';
+          statusText = '👑 Leading';
+        } else if (myWins < oppWins) {
+          status = 'trailing';
+          statusText = '⚠️ Trailing';
+        }
+        rivals.push({
+          opponent: oppName,
+          myWins,
+          oppWins,
+          totalGames: total,
+          winRate,
+          status,
+          statusText
+        });
+      }
+    }
+
+    if (!rivals.length) {
+      h2hBody.innerHTML = `<tr><td colspan="4" class="empty-leaderboard">No rivalry matches recorded for "${escapeHtml(myName)}" yet.<br><small style="opacity:0.75; display:block; margin-top:4px;">Play vs Cyber Bot or challenge a friend to start your H2H rivalry!</small></td></tr>`;
+      return;
+    }
+
+    rivals.sort((a, b) => b.totalGames - a.totalGames);
+
+    let html = '';
+    rivals.forEach(r => {
+      html += `
+        <tr>
+          <td class="name-cell" title="${escapeHtml(r.opponent)}"><strong>${escapeHtml(r.opponent)}</strong></td>
+          <td class="wins-cell">${r.myWins} - ${r.oppWins}</td>
+          <td class="winrate-cell">${r.winRate}%</td>
+          <td><span class="rivalry-chip ${r.status}">${r.statusText}</span></td>
+        </tr>
+      `;
+    });
+    h2hBody.innerHTML = html;
   }
 
   function renderLeaderboard(top5) {
@@ -447,6 +522,24 @@ function initApp() {
     return CYBER_NAMES[Math.floor(Math.random() * CYBER_NAMES.length)];
   }
 
+  if (tabH2H && tabGlobal && viewH2H && viewGlobal) {
+    tabH2H.addEventListener('click', () => {
+      tabH2H.classList.add('active');
+      tabGlobal.classList.remove('active');
+      viewH2H.classList.remove('hidden');
+      viewGlobal.classList.add('hidden');
+      renderH2HLeaderboard();
+    });
+
+    tabGlobal.addEventListener('click', () => {
+      tabGlobal.classList.add('active');
+      tabH2H.classList.remove('active');
+      viewGlobal.classList.remove('hidden');
+      viewH2H.classList.add('hidden');
+      renderLeaderboard();
+    });
+  }
+
   if (inputPlayerName) {
     let savedName = null;
     try { savedName = localStorage.getItem('brick_clash_name'); } catch (e) {}
@@ -455,15 +548,19 @@ function initApp() {
     inputPlayerName.addEventListener('change', () => {
       try { localStorage.setItem('brick_clash_name', inputPlayerName.value.trim()); } catch (e) {}
       updateCareerBadge(null);
+      renderH2HLeaderboard();
     });
     inputPlayerName.addEventListener('input', () => {
       try { localStorage.setItem('brick_clash_name', inputPlayerName.value.trim()); } catch (e) {}
       updateCareerBadge(null);
+      renderH2HLeaderboard();
     });
+    renderH2HLeaderboard();
     renderLeaderboard(loadLocalLeaderboard());
     updateCareerBadge(null);
     fetchCloudflareLeaderboard();
   } else {
+    renderH2HLeaderboard();
     renderLeaderboard(loadLocalLeaderboard());
     fetchCloudflareLeaderboard();
   }
@@ -965,6 +1062,7 @@ function initApp() {
     if (inputPlayerName) inputPlayerName.value = newName;
     try { localStorage.setItem('brick_clash_name', newName); } catch (e) {}
     updateCareerBadge(null);
+    renderH2HLeaderboard();
     showToast('Callsign: ' + newName);
   });
 

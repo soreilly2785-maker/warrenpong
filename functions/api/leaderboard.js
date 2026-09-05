@@ -1,16 +1,5 @@
 ﻿// Cloudflare Pages Function: /api/leaderboard
-// Persistent Global KV Leaderboard running on Cloudflare Edge
-
-const DEFAULT_LEADERBOARD = {
-  players: {
-    "NeonStriker": { wins: 18, losses: 4, totalGames: 22, streak: 5, bestStreak: 7, lastPlayed: 1725500000000 },
-    "CyberAce": { wins: 14, losses: 5, totalGames: 19, streak: 3, bestStreak: 6, lastPlayed: 1725500000000 },
-    "Vortex": { wins: 11, losses: 4, totalGames: 15, streak: 2, bestStreak: 5, lastPlayed: 1725500000000 },
-    "Viper": { wins: 8, losses: 6, totalGames: 14, streak: 1, bestStreak: 4, lastPlayed: 1725500000000 },
-    "Nova": { wins: 6, losses: 5, totalGames: 11, streak: 0, bestStreak: 3, lastPlayed: 1725500000000 }
-  },
-  h2h: {}
-};
+// Persistent Global KV Leaderboard & H2H Rivalry Engine running on Cloudflare Edge
 
 function getTop5(players) {
   const list = Object.entries(players || {}).map(([name, data]) => {
@@ -55,18 +44,16 @@ export async function onRequestGet({ env }) {
     if (env && env.LEADERBOARD_KV) {
       data = await env.LEADERBOARD_KV.get("global_leaderboard", "json");
     }
-    if (!data || !data.players) {
-      data = DEFAULT_LEADERBOARD;
-      if (env && env.LEADERBOARD_KV) {
-        await env.LEADERBOARD_KV.put("global_leaderboard", JSON.stringify(DEFAULT_LEADERBOARD));
-      }
-    }
+    if (!data) data = { players: {}, h2h: {} };
+    if (!data.players) data.players = {};
+    if (!data.h2h) data.h2h = {};
+
     const top5 = getTop5(data.players);
-    return new Response(JSON.stringify({ success: true, top5, players: data.players }), {
+    return new Response(JSON.stringify({ success: true, top5, players: data.players, h2h: data.h2h }), {
       headers: corsHeaders
     });
   } catch (err) {
-    return new Response(JSON.stringify({ success: false, error: err.message, top5: getTop5(DEFAULT_LEADERBOARD.players) }), {
+    return new Response(JSON.stringify({ success: false, error: err.message, top5: [], players: {}, h2h: {} }), {
       headers: corsHeaders
     });
   }
@@ -81,9 +68,9 @@ export async function onRequestPost({ request, env }) {
     if (env && env.LEADERBOARD_KV) {
       data = await env.LEADERBOARD_KV.get("global_leaderboard", "json");
     }
-    if (!data || !data.players) {
-      data = JSON.parse(JSON.stringify(DEFAULT_LEADERBOARD));
-    }
+    if (!data) data = { players: {}, h2h: {} };
+    if (!data.players) data.players = {};
+    if (!data.h2h) data.h2h = {};
 
     const now = Date.now();
 
@@ -91,6 +78,7 @@ export async function onRequestPost({ request, env }) {
       const w = winnerName.trim();
       const l = loserName.trim();
 
+      // Winner
       if (!data.players[w]) {
         data.players[w] = { wins: 0, losses: 0, totalGames: 0, streak: 0, bestStreak: 0, lastPlayed: now };
       }
@@ -100,6 +88,7 @@ export async function onRequestPost({ request, env }) {
       data.players[w].bestStreak = Math.max(data.players[w].bestStreak || 0, data.players[w].streak);
       data.players[w].lastPlayed = now;
 
+      // Loser
       if (!data.players[l]) {
         data.players[l] = { wins: 0, losses: 0, totalGames: 0, streak: 0, bestStreak: 0, lastPlayed: now };
       }
@@ -108,13 +97,22 @@ export async function onRequestPost({ request, env }) {
       data.players[l].streak = 0;
       data.players[l].lastPlayed = now;
 
+      // Head-to-Head record
+      const pairKey = [w, l].sort().join(':::');
+      if (!data.h2h[pairKey]) {
+        data.h2h[pairKey] = { [w]: 0, [l]: 0, totalGames: 0 };
+      }
+      data.h2h[pairKey][w] = (data.h2h[pairKey][w] || 0) + 1;
+      if (data.h2h[pairKey][l] === undefined) data.h2h[pairKey][l] = 0;
+      data.h2h[pairKey].totalGames = (data.h2h[pairKey].totalGames || 0) + 1;
+
       if (env && env.LEADERBOARD_KV) {
         await env.LEADERBOARD_KV.put("global_leaderboard", JSON.stringify(data));
       }
     }
 
     const top5 = getTop5(data.players);
-    return new Response(JSON.stringify({ success: true, top5, players: data.players }), {
+    return new Response(JSON.stringify({ success: true, top5, players: data.players, h2h: data.h2h }), {
       headers: corsHeaders
     });
   } catch (err) {
