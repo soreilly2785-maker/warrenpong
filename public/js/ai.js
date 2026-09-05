@@ -8,12 +8,24 @@ class LocalGameSimulator {
     this.isMultiplayer = false; // When true: P2 is human, disable AI override
     this.nextEntityId = 1;
     this.p1Name = 'Player 1';
+    this.difficulty = 'veteran'; // 'rookie' | 'veteran' | 'master'
     this.p2Name = 'Cyber Bot (AI)';
 
     this.aiErrorOffset = 0;
     this.lastErrorUpdate = 0;
 
     this.initGame();
+  }
+
+  setDifficulty(diff = 'veteran') {
+    this.difficulty = diff;
+    if (diff === 'rookie') {
+      this.p2Name = 'Rookie Bot (AI)';
+    } else if (diff === 'master') {
+      this.p2Name = 'Mecha Master (AI)';
+    } else {
+      this.p2Name = 'Cyber Bot (AI)';
+    }
   }
 
   initGame() {
@@ -135,9 +147,10 @@ class LocalGameSimulator {
     return bricks;
   }
 
-  start(p1Name = 'Player 1') {
+  start(p1Name = 'Player 1', difficulty = null) {
     this.p1Name = p1Name;
-    this.p2Name = 'Cyber Bot (AI)';
+    if (difficulty) this.setDifficulty(difficulty);
+    else this.setDifficulty(this.difficulty || 'veteran');
     this.isMultiplayer = false;
     this.initGame();
     this.isRunning = true;
@@ -194,17 +207,36 @@ class LocalGameSimulator {
     const p2 = this.state.paddles.p2;
     const now = Date.now();
 
-    // Human tracking estimation cycle
-    if (now - this.lastErrorUpdate > 900) {
-      this.aiErrorOffset = (Math.random() - 0.5) * 35;
+    const isRookie = (this.difficulty === 'rookie');
+    const isMaster = (this.difficulty === 'master');
+
+    // Error update interval & variance by difficulty
+    const errorInterval = isRookie ? 1300 : (isMaster ? 350 : 850);
+    const errorMagnitude = isRookie ? 55 : (isMaster ? 10 : 30);
+
+    if (now - this.lastErrorUpdate > errorInterval) {
+      this.aiErrorOffset = (Math.random() - 0.5) * errorMagnitude;
       this.lastErrorUpdate = now;
+    }
+
+    // Master AI uses Turbo when charged and ball is speeding towards it
+    if (isMaster && p2.charge >= 100 && p2.turboTimer <= 0) {
+      const incomingFastBall = this.state.balls.find(b => b.vx > 7 && b.x > 600);
+      if (incomingFastBall) {
+        p2.turboTimer = 8.0;
+        p2.charge = 0;
+        this.sound.playPowerupCollect();
+        this.renderer.addExplosion(p2.x + p2.width / 2, p2.y + p2.height / 2, 40, '#ff0077');
+        this.renderer.addFloatingText('🔥 MASTER TURBO!', p2.x - 80, p2.y + p2.height / 2, '#ff0077', 20);
+      }
     }
 
     let targetBall = null;
     let closestDist = Infinity;
+    const minTrackX = isRookie ? 460 : (isMaster ? 180 : 300);
 
     this.state.balls.forEach(b => {
-      if (b.vx > 0 && b.x > 320) {
+      if (b.vx > 0 && b.x > minTrackX) {
         const dist = 1004 - b.x;
         if (dist < closestDist) {
           closestDist = dist;
@@ -216,19 +248,27 @@ class LocalGameSimulator {
     if (targetBall) {
       let estimatedY = targetBall.y;
 
-      // 1. Curving Fireballs: Human reaction cannot predict the sinusoidal arc phase accurately!
-      // Add significant dynamic curve perturbation so curving fireballs fool the bot
+      // 1. Curving Fireballs: Rookie gets completely fooled; Master predicts trajectory
       if (targetBall.type === 'fireball') {
-        const curveNoise = Math.sin((targetBall.curvePhase || 0) * 2.2) * 55;
-        estimatedY += curveNoise + (Math.random() - 0.5) * 30;
+        const noiseFactor = isRookie ? 75 : (isMaster ? 15 : 45);
+        const curveNoise = Math.sin((targetBall.curvePhase || 0) * 2.2) * noiseFactor;
+        estimatedY += curveNoise + (Math.random() - 0.5) * (isRookie ? 40 : 15);
       } else if (targetBall.type === 'guided') {
-        // 2. Guided Ball: Delayed reaction to human thumb remote steering
-        estimatedY = (this.lastEstimatedY || targetBall.y) * 0.72 + targetBall.y * 0.28;
+        // Guided ball tracking latency
+        const blend = isMaster ? 0.45 : (isRookie ? 0.18 : 0.28);
+        estimatedY = (this.lastEstimatedY || targetBall.y) * (1 - blend) + targetBall.y * blend;
       }
 
-      // 3. Wall Bounces: When ball rebounds off top/bottom walls, add realistic angle misjudgment
+      // 2. Wall Bounces: Misjudgments
       if (targetBall.y < 100 || targetBall.y > 600) {
-        estimatedY += (targetBall.vy > 0 ? -28 : 28);
+        const bounceErr = isRookie ? 45 : (isMaster ? 8 : 25);
+        estimatedY += (targetBall.vy > 0 ? -bounceErr : bounceErr);
+      }
+
+      // 3. Master AI deliberately aims for paddle edges to send sharp angle returns
+      if (isMaster && targetBall.x > 850) {
+        const edgeOffset = (targetBall.y > 350 ? -18 : 18);
+        estimatedY += edgeOffset;
       }
 
       this.lastEstimatedY = estimatedY;
@@ -236,7 +276,8 @@ class LocalGameSimulator {
       p2.targetY = Math.max(10, Math.min(700 - p2.height - 10, targetCenter - p2.height / 2));
     } else {
       // Idle rhythm breathing when ball is on opponent's half
-      p2.targetY = 350 - p2.height / 2 + Math.sin(now * 0.0015) * 45;
+      const idleAmp = isRookie ? 65 : (isMaster ? 25 : 45);
+      p2.targetY = 350 - p2.height / 2 + Math.sin(now * 0.0015) * idleAmp;
     }
   }
 
@@ -318,7 +359,15 @@ class LocalGameSimulator {
     } else {
       const diff = p2.targetY - p2.y;
       const isFastPhase = this.state.isSuddenDeath || p2.turboTimer > 0;
-      const aiMaxSpeed = isFastPhase ? 6.8 : 5.6; // Agility
+      let aiMaxSpeed = 5.6;
+      if (this.difficulty === 'rookie') {
+        aiMaxSpeed = isFastPhase ? 4.8 : 3.8;
+      } else if (this.difficulty === 'master') {
+        aiMaxSpeed = isFastPhase ? 9.2 : 7.6;
+      } else {
+        aiMaxSpeed = isFastPhase ? 6.8 : 5.6;
+      }
+
       if (Math.abs(diff) < aiMaxSpeed) {
         p2.y = p2.targetY;
       } else {

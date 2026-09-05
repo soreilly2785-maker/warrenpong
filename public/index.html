@@ -5,12 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>WarrenPong - LAN Multiplayer Arcade</title>
+  <title>Warren Pong - Fast 1v1 Online Neon Table Tennis & Arcade Pong</title>
+  <meta name="description" content="High-octane 1v1 cyberpunk arcade table tennis with curveball spin physics, fireballs, and instant zero-friction multiplayer. Play free in your browser on mobile and desktop.">
+  <meta name="keywords" content="pong, online pong, 2 player games, table tennis browser game, cyberpunk pong, arcade games, web games">
+  <link rel="canonical" href="https://warrenpong.pages.dev/">
+
+  <!-- Open Graph / Facebook / WhatsApp -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Warren Pong - Fast 1v1 Online Neon Table Tennis">
+  <meta property="og:description" content="Challenger invited! Play fast-paced 1v1 cyberpunk table tennis with curveballs and fireballs. Free and instant in your browser.">
+  <meta property="og:url" content="https://warrenpong.pages.dev/">
+  <meta property="og:site_name" content="Warren Pong">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Warren Pong - Fast 1v1 Online Neon Table Tennis">
+  <meta name="twitter:description" content="Challenger invited! Play fast-paced 1v1 cyberpunk table tennis with curveballs and fireballs.">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0a0b12">
+
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "Warren Pong",
+    "description": "High-octane 1v1 cyberpunk arcade table tennis with curveball spin physics, fireballs, and instant zero-friction multiplayer.",
+    "genre": ["Arcade", "Sports", "Multiplayer"],
+    "playMode": "MultiPlayer",
+    "applicationCategory": "Game",
+    "operatingSystem": "Any (Web Browser)"
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=2.2">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22><text y=%221em%22 font-size=%2280%22>🏓</text></svg>">
+  <link rel="stylesheet" href="css/style.css?v=3.7">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🏓</text></svg>">
 </head>
 <body>
   <div id="app-container">
@@ -18,7 +52,7 @@
     <header id="game-header">
       <div class="logo-group">
         <span class="logo-icon">⚡</span>
-        <span class="logo-text">WARREN<span class="highlight">PONG</span> <span style="font-size:0.65rem; opacity:0.6; font-weight:normal; letter-spacing:0;">v3.6</span></span>
+        <span class="logo-text">WARREN<span class="highlight">PONG</span> <span style="font-size:0.65rem; opacity:0.6; font-weight:normal; letter-spacing:0;">v3.7</span></span>
       </div>
       <div class="header-controls">
         <button id="btn-sound" class="icon-btn" title="Toggle Sound">
@@ -77,6 +111,16 @@
               <span class="btn-icon">🤖</span>
               <span>Solo vs AI Bot</span>
             </button>
+
+            <!-- AI DIFFICULTY SELECTOR -->
+            <div class="ai-tier-container">
+              <span class="ai-tier-label">BOT DIFFICULTY:</span>
+              <div class="ai-tier-pills" id="ai-diff-pills">
+                <button type="button" class="ai-pill" data-level="rookie" title="Forgiving bot for beginners">🤖 ROOKIE</button>
+                <button type="button" class="ai-pill active" data-level="veteran" title="Balanced competitive bot">⚡ VETERAN</button>
+                <button type="button" class="ai-pill" data-level="master" title="Aggressive bot with spin curves & turbo">🔥 MASTER</button>
+              </div>
+            </div>
           </div>
 
           <!-- LEADERBOARD & H2H RIVALRIES CARD -->
@@ -175,6 +219,14 @@
               <div id="p2-slot-name" class="slot-name">Waiting for challenger...</div>
               <div id="p2-slot-status" class="slot-status waiting">WAITING</div>
             </div>
+          </div>
+
+          <!-- 1-TAP VIRAL CHALLENGE BUTTON -->
+          <div class="room-challenge-wrap">
+            <button id="btn-challenge-friend" class="btn btn-primary btn-large btn-glow" title="Share invite link directly to WhatsApp, Messages, or clipboard">
+              <span class="btn-icon">📲</span>
+              <span>CHALLENGE A FRIEND (1-TAP INVITE)</span>
+            </button>
           </div>
 
           <!-- HEAD-TO-HEAD RIVALRY BANNER -->
@@ -379,13 +431,13 @@
 
   </div>
 
-  <!-- CACHE-BUSTED SCRIPTS (v=3.6) -->
-  <script src="js/socket.io.min.js?v=3.6"></script>
-  <script src="js/qrcode.min.js?v=3.6"></script>
-  <script src="js/audio.js?v=3.6"></script>
-  <script src="js/renderer.js?v=3.6"></script>
-  <script src="js/controls.js?v=3.6"></script>
-  <script src="js/ai.js?v=3.6"></script>
-  <script src="js/main.js?v=3.6"></script>
+  <!-- CACHE-BUSTED SCRIPTS (v=3.7) -->
+  <script src="js/socket.io.min.js?v=3.7"></script>
+  <script src="js/qrcode.min.js?v=3.7"></script>
+  <script src="js/audio.js?v=3.7"></script>
+  <script src="js/renderer.js?v=3.7"></script>
+  <script src="js/controls.js?v=3.7"></script>
+  <script src="js/ai.js?v=3.7"></script>
+  <script src="js/main.js?v=3.7"></script>
 </body>
 </html>

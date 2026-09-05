@@ -26,6 +26,8 @@ function initApp() {
   const inputJoinCode = document.getElementById('input-join-code');
   const joinErrorMsg = document.getElementById('join-error-msg');
   const btnCloseJoin = document.getElementById('btn-close-join');
+  const btnChallengeFriend = document.getElementById('btn-challenge-friend');
+  const aiDiffPills = document.querySelectorAll('#ai-diff-pills .ai-pill');
 
   // Header & Controls
   const btnFlipView = document.getElementById('btn-flip-view');
@@ -451,7 +453,10 @@ function initApp() {
   let controls = null;
 
   try {
-    if (window.soundManager) sound = window.soundManager;
+    if (window.soundManager) {
+      sound = window.soundManager;
+      if (soundIcon) soundIcon.textContent = sound.muted ? '🔇' : '🔊';
+    }
   } catch (e) { console.warn("soundManager warning:", e); }
 
   try {
@@ -1164,6 +1169,36 @@ function initApp() {
     }
   });
 
+  // AI Difficulty State & Pills
+  let currentAIDifficulty = 'veteran';
+  try {
+    const savedDiff = localStorage.getItem('wp_ai_diff');
+    if (savedDiff && ['rookie', 'veteran', 'master'].includes(savedDiff)) {
+      currentAIDifficulty = savedDiff;
+    }
+  } catch (e) {}
+
+  if (aiDiffPills && aiDiffPills.length > 0) {
+    aiDiffPills.forEach(pill => {
+      if (pill.getAttribute('data-level') === currentAIDifficulty) {
+        pill.classList.add('active');
+      } else {
+        pill.classList.remove('active');
+      }
+
+      pill.addEventListener('click', (e) => {
+        e.preventDefault();
+        unlockAudio();
+        aiDiffPills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        currentAIDifficulty = pill.getAttribute('data-level');
+        try { localStorage.setItem('wp_ai_diff', currentAIDifficulty); } catch (err) {}
+        if (sound) sound.playPowerupCollect();
+        showToast(`Bot set to ${currentAIDifficulty.toUpperCase()}`);
+      });
+    });
+  }
+
   // Solo AI Game
   btnSoloAI.addEventListener('click', () => {
     unlockAudio();
@@ -1171,7 +1206,11 @@ function initApp() {
     mySlot = 'p1';
     controls.setPlayerSlot('p1');
     playerNames.p1 = getPlayerName();
-    playerNames.p2 = 'Cyber Bot (AI)';
+    
+    let botName = 'Cyber Bot (AI)';
+    if (currentAIDifficulty === 'rookie') botName = 'Rookie Bot (AI)';
+    else if (currentAIDifficulty === 'master') botName = 'Mecha Master (AI)';
+    playerNames.p2 = botName;
 
     if (!soloSimulator) {
       soloSimulator = new window.LocalGameSimulator(
@@ -1185,6 +1224,7 @@ function initApp() {
         }
       );
     }
+    soloSimulator.setDifficulty(currentAIDifficulty);
 
     showScreen(screenGame);
     countdownOverlay.classList.remove('hidden');
@@ -1200,7 +1240,7 @@ function initApp() {
       } else {
         clearInterval(interval);
         countdownOverlay.classList.add('hidden');
-        soloSimulator.start(getPlayerName());
+        soloSimulator.start(getPlayerName(), currentAIDifficulty);
       }
     }, 1000);
   });
@@ -1323,7 +1363,51 @@ function initApp() {
     showScreen(screenLobby);
   });
 
-  // URL Hash Auto-Join Detection
+  // 1-Tap Invite Sharing (WhatsApp, iMessage, Web Share API, or Clipboard)
+  function getDirectRoomUrl(code) {
+    const origin = window.location.origin;
+    return `${origin}?room=${encodeURIComponent(code)}`;
+  }
+
+  async function shareChallengeInvite(code) {
+    if (!code || code === '----') {
+      showToast('Waiting for room code to generate...');
+      return;
+    }
+    const inviteUrl = getDirectRoomUrl(code);
+    const senderName = getPlayerName();
+    const shareText = `⚔️ ${senderName} has challenged you to a 1v1 duel on Warren Pong! Tap to play: ${inviteUrl}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Warren Pong 1v1 Duel',
+          text: `⚔️ ${senderName} has challenged you to a 1v1 duel on Warren Pong! Tap to join:`,
+          url: inviteUrl
+        });
+        showToast('Challenge sent!');
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    // Clipboard fallback
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      showToast('Invite link copied! Share via WhatsApp or Messages.');
+    } catch (err) {
+      showToast(`Room link: ${inviteUrl}`);
+    }
+  }
+
+  if (btnChallengeFriend) {
+    btnChallengeFriend.addEventListener('click', () => {
+      shareChallengeInvite(currentRoomCode);
+    });
+  }
+
+  // URL Hash & Query Auto-Join Detection (1-Click Seamless Entry)
   const hashMatch = window.location.hash.match(/room=([A-Za-z0-9_-]+)/i);
   const searchParams = new URLSearchParams(window.location.search);
   const urlRoomCode = (hashMatch ? hashMatch[1] : searchParams.get('room'));
@@ -1331,10 +1415,31 @@ function initApp() {
   if (urlRoomCode) {
     const code = urlRoomCode.toUpperCase().trim();
     inputJoinCode.value = code;
+    showToast(`⚔️ Connecting to Room ${code}...`);
+
     setTimeout(() => {
-      showToast(`Ready to join Room ${code}!`);
-      modalJoin.classList.remove('hidden');
-    }, 600);
+      unlockAudio();
+      p1SlotName.textContent = 'Room Host';
+      p1SlotStatus.textContent = 'READY';
+      p1SlotStatus.className = 'slot-status ready';
+      p2SlotName.textContent = getPlayerName();
+      p2SlotStatus.textContent = 'JOINING';
+      p2SlotStatus.className = 'slot-status waiting';
+      displayRoomCode.textContent = code;
+      roomStatusText.textContent = `Connecting to room ${code}...`;
+      showScreen(screenRoom);
+
+      const sendAutoJoin = () => {
+        if (socket && socket.connected) {
+          socket.emit('join_room', { roomCode: code, playerName: getPlayerName() });
+        } else if (socket) {
+          socket.once('connect', () => {
+            socket.emit('join_room', { roomCode: code, playerName: getPlayerName() });
+          });
+        }
+      };
+      sendAutoJoin();
+    }, 450);
   }
 }
 

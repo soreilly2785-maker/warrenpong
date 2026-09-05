@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Prioritize Head-to-Head (H2H) rivalries for current player with dedicated tabs (v3.6)',
+    message: 'Add 1-tap viral invite links, audio polish, 3-tier AI difficulty, and discoverability metadata (v3.7)',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with v3.6 prioritized H2H rivalries!');
+  console.log('GitHub updated successfully with v3.7 changes!');
 })();
