@@ -582,7 +582,7 @@ class GameRenderer {
       }
       const trail = this.ballTrails.get(ball.id);
       trail.push({ x: ball.x, y: ball.y });
-      if (trail.length > 8) trail.shift();
+      if (trail.length > (ball.type === 'fireball' ? 12 : 8)) trail.shift();
 
       // Motion Trail
       ctx.save();
@@ -591,7 +591,8 @@ class GameRenderer {
         const alpha = (i + 1) / trail.length * 0.45;
         let trailColor = `rgba(255, 255, 255, ${alpha})`;
         if (ball.type === 'fireball') {
-          trailColor = `rgba(255, 69, 0, ${alpha})`;
+          const flameColor = (i % 2 === 0) ? '255, 69, 0' : '255, 200, 0';
+          trailColor = `rgba(${flameColor}, ${alpha * 0.95})`;
         } else if (ball.type === 'emp') {
           trailColor = `rgba(192, 132, 252, ${alpha})`;
         } else if (ball.type === 'guided') {
@@ -606,7 +607,8 @@ class GameRenderer {
 
         ctx.fillStyle = trailColor;
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, ball.radius * ((i + 1) / trail.length), 0, Math.PI * 2);
+        const trailRadius = ball.type === 'fireball' ? (ball.radius * ((i + 1) / trail.length) * 1.2) : (ball.radius * ((i + 1) / trail.length));
+        ctx.arc(pt.x, pt.y, trailRadius, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
@@ -614,23 +616,21 @@ class GameRenderer {
       // Guided Ball Laser-Control Beam from paddle to ball
       if (ball.type === 'guided' && ball.lastHitter && paddles && paddles[ball.lastHitter]) {
         const p = paddles[ball.lastHitter];
-        const px = typeof p.x === 'number' ? p.x : (ball.lastHitter === 'p1' ? 180 : 1004);
-        const py = typeof p.y === 'number' ? p.y : 320;
-        const pw = typeof p.width === 'number' ? p.width : (typeof p.w === 'number' ? p.w : 16);
-        const ph = typeof p.height === 'number' ? p.height : (typeof p.h === 'number' ? p.h : 58);
+        const pX = (ball.lastHitter === 'p1') ? (p.x + p.width) : p.x;
+        const pY = p.y + p.height / 2;
+
         ctx.save();
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+        ctx.strokeStyle = (ball.lastHitter === 'p1') ? 'rgba(0, 240, 255, 0.45)' : 'rgba(255, 0, 119, 0.45)';
         ctx.lineWidth = 1.5;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
-        ctx.moveTo(px + pw / 2, py + ph / 2);
+        ctx.moveTo(pX, pY);
         ctx.lineTo(ball.x, ball.y);
         ctx.stroke();
 
-        // Target reticle on guided ball
-        ctx.setLineDash([]);
         ctx.strokeStyle = '#00f0ff';
-        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, (ball.radius || 10) + 6, 0, Math.PI * 2);
         ctx.stroke();
@@ -643,19 +643,27 @@ class GameRenderer {
       let glowColor = '#00f0ff';
 
       if (ball.type === 'fireball') {
-        ballColor = '#ffea00';
+        ballColor = '#fff577';
         glowColor = '#ff3300';
-        ctx.shadowBlur = 25;
-        if (Math.random() < 0.4) {
+        ctx.shadowBlur = 32;
+
+        // Dynamic fiery aura
+        ctx.strokeStyle = 'rgba(255, 69, 0, 0.7)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius + 3 + Math.sin(Date.now() * 0.02) * 2, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (Math.random() < 0.75) {
           this.particles.push({
-            x: ball.x + (Math.random() * 8 - 4),
-            y: ball.y + (Math.random() * 8 - 4),
-            vx: -ball.vx * 0.15 + (Math.random() * 2 - 1),
-            vy: -ball.vy * 0.15 + (Math.random() * 2 - 1),
-            size: Math.random() * 3 + 2,
-            color: Math.random() > 0.5 ? '#ff4500' : '#ffd700',
-            alpha: 0.9,
-            decay: 0.05,
+            x: ball.x + (Math.random() * 10 - 5),
+            y: ball.y + (Math.random() * 10 - 5),
+            vx: -ball.vx * 0.22 + (Math.random() * 2.5 - 1.25),
+            vy: -ball.vy * 0.22 + (Math.random() * 2.5 - 1.25),
+            size: Math.random() * 4 + 2,
+            color: Math.random() > 0.4 ? '#ff3300' : (Math.random() > 0.5 ? '#ff9900' : '#ffd700'),
+            alpha: 0.95,
+            decay: 0.045,
             shape: 'spark'
           });
         }

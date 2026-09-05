@@ -769,6 +769,24 @@ class Room {
         }
       }
 
+      // 3. Dynamic Fireball Snaking Direction-Shifts (S-Curve Weave)
+      if (ball.type === 'fireball') {
+        ball.curvePhase = (ball.curvePhase || 0) + 0.14;
+        const spd = ball.speed || Math.hypot(ball.vx, ball.vy) || 16.0;
+        let heading = Math.atan2(ball.vy, Math.abs(ball.vx));
+
+        // Undulating angular weave that changes direction dynamically across the court
+        const weaveDelta = Math.cos(ball.curvePhase) * 0.045;
+        heading += weaveDelta;
+
+        // Keep bounded to sharp, clean playable angles (~38 deg max)
+        heading = Math.max(-0.66, Math.min(0.66, heading));
+
+        const dirX = Math.sign(ball.vx) || 1;
+        ball.vx = dirX * spd * Math.cos(heading);
+        ball.vy = spd * Math.sin(heading);
+      }
+
       ball.x += ball.vx;
       ball.y += ball.vy;
 
@@ -1010,7 +1028,8 @@ class Room {
     if (hasFireball) {
       ball.type = 'fireball';
       ball.typeTimer = 8;
-      speed = Math.min(speed, 15.0); // Balanced speed cap for Fireball
+      ball.curvePhase = (Math.random() > 0.5 ? 0 : Math.PI);
+      speed = Math.max(15.5, Math.min(speed * 1.15, 18.0)); // Punchy fiery comet speed!
     } else if (hasGuided) {
       ball.type = 'guided';
       ball.typeTimer = 8;
@@ -1286,6 +1305,29 @@ io.on('connection', (socket) => {
 
   socket.on('get_h2h', ({ p1, p2 }) => {
     socket.emit('h2h_data', { p1Name: p1, p2Name: p2, h2h: getH2H(p1, p2) });
+  });
+
+  socket.on('record_game_result', ({ winnerName, loserName }) => {
+    if (winnerName && loserName && winnerName !== loserName) {
+      recordMatchResult(winnerName, loserName);
+    }
+  });
+
+  socket.on('sync_player_stats', ({ playerName, wins, losses }) => {
+    if (playerName && typeof wins === 'number') {
+      const p = playerName.trim();
+      if (!leaderboardData.players[p]) {
+        leaderboardData.players[p] = { wins, losses: losses || 0, totalGames: wins + (losses || 0), streak: 0, bestStreak: 0, lastPlayed: Date.now() };
+      } else {
+        const cur = leaderboardData.players[p];
+        cur.wins = Math.max(cur.wins || 0, wins);
+        cur.losses = Math.max(cur.losses || 0, losses || 0);
+        cur.totalGames = Math.max(cur.totalGames || 0, cur.wins + cur.losses);
+        cur.lastPlayed = Date.now();
+      }
+      saveLeaderboard();
+      broadcastLeaderboard();
+    }
   });
 
   socket.on('create_room', ({ playerName }) => {

@@ -422,6 +422,24 @@ class LocalGameSimulator {
         }
       }
 
+      // 3. Dynamic Fireball Snaking Direction-Shifts (S-Curve Weave)
+      if (ball.type === 'fireball') {
+        ball.curvePhase = (ball.curvePhase || 0) + 0.14;
+        const spd = ball.speed || Math.hypot(ball.vx, ball.vy) || 16.0;
+        let heading = Math.atan2(ball.vy, Math.abs(ball.vx));
+
+        // Undulating angular weave that changes direction dynamically across the court
+        const weaveDelta = Math.cos(ball.curvePhase) * 0.045;
+        heading += weaveDelta;
+
+        // Keep bounded to sharp, clean playable angles (~38 deg max)
+        heading = Math.max(-0.66, Math.min(0.66, heading));
+
+        const dirX = Math.sign(ball.vx) || 1;
+        ball.vx = dirX * spd * Math.cos(heading);
+        ball.vy = spd * Math.sin(heading);
+      }
+
       ball.x += ball.vx;
       ball.y += ball.vy;
 
@@ -632,7 +650,8 @@ class LocalGameSimulator {
     if (hasFireball) {
       ball.type = 'fireball';
       ball.typeTimer = 8;
-      speed = Math.min(speed, 15.0); // Balanced speed cap for Fireball
+      ball.curvePhase = (Math.random() > 0.5 ? 0 : Math.PI);
+      speed = Math.max(15.5, Math.min(speed * 1.15, 18.0)); // Punchy fiery comet speed!
       this.sound.playPaddleHit(true, paddle.combo);
       this.renderer.addExplosion(ball.x, ball.y, 40, '#ff4500');
     } else if (hasGuided) {

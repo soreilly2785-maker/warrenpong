@@ -87,7 +87,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   });
 
   const newCommit = await ghRequest(`/repos/${owner}/${repoName}/git/commits`, 'POST', {
-    message: 'Simplify lobby, full-width tap-anywhere touchpad, and enlarge powerup icons and paddle badges (v3.4)',
+    message: 'Persistent cross-session leaderboard & empowered Fireball S-curve direction shifts (v3.5)',
     tree: newTree.sha,
     parents: [parentCommitSha]
   });
@@ -97,5 +97,5 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
     force: true
   });
 
-  console.log('GitHub updated successfully with v3.4 usability refinements!');
+  console.log('GitHub updated successfully with v3.5 persistent leaderboard & empowered Fireball!');
 })();

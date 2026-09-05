@@ -1,0 +1,51 @@
+﻿{
+  "players": {
+    "NeonStriker": {
+      "wins": 18,
+      "losses": 4,
+      "totalGames": 22,
+      "streak": 5,
+      "bestStreak": 7,
+      "lastPlayed": 1725500000000
+    },
+    "CyberAce": {
+      "wins": 14,
+      "losses": 5,
+      "totalGames": 19,
+      "streak": 3,
+      "bestStreak": 6,
+      "lastPlayed": 1725500000000
+    },
+    "Vortex": {
+      "wins": 11,
+      "losses": 4,
+      "totalGames": 15,
+      "streak": 2,
+      "bestStreak": 5,
+      "lastPlayed": 1725500000000
+    },
+    "Viper": {
+      "wins": 8,
+      "losses": 6,
+      "totalGames": 14,
+      "streak": 1,
+      "bestStreak": 4,
+      "lastPlayed": 1725500000000
+    },
+    "Nova": {
+      "wins": 6,
+      "losses": 5,
+      "totalGames": 11,
+      "streak": 0,
+      "bestStreak": 3,
+      "lastPlayed": 1725500000000
+    }
+  },
+  "h2h": {
+    "CyberAce:::NeonStriker": {
+      "NeonStriker": 3,
+      "CyberAce": 1,
+      "totalGames": 4
+    }
+  }
+}

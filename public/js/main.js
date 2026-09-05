@@ -115,15 +115,149 @@ function initApp() {
     return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
   }
 
+  // --- PERSISTENT LEADERBOARD (PERSISTS ACROSS SESSIONS & COLD-STARTS) ---
+  const DEFAULT_LEADERBOARD = [
+    { name: 'NeonStriker', wins: 18, losses: 4, totalGames: 22, winRate: 82, streak: 5 },
+    { name: 'CyberAce', wins: 14, losses: 5, totalGames: 19, winRate: 74, streak: 3 },
+    { name: 'Vortex', wins: 11, losses: 4, totalGames: 15, winRate: 73, streak: 2 },
+    { name: 'Viper', wins: 8, losses: 6, totalGames: 14, winRate: 57, streak: 1 },
+    { name: 'Nova', wins: 6, losses: 5, totalGames: 11, winRate: 55, streak: 0 }
+  ];
+
+  function getLocalPlayersMap() {
+    try {
+      const raw = localStorage.getItem('wp_players_map');
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    const map = {};
+    DEFAULT_LEADERBOARD.forEach(p => {
+      map[p.name] = {
+        wins: p.wins,
+        losses: p.losses,
+        totalGames: p.totalGames,
+        streak: p.streak,
+        bestStreak: p.streak,
+        lastPlayed: Date.now()
+      };
+    });
+    try { localStorage.setItem('wp_players_map', JSON.stringify(map)); } catch (e) {}
+    return map;
+  }
+
+  function getTop5FromMap(playersMap) {
+    const list = Object.entries(playersMap).map(([name, data]) => {
+      const wins = data.wins || 0;
+      const losses = data.losses || 0;
+      const total = data.totalGames || (wins + losses);
+      const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+      return {
+        name,
+        wins,
+        losses,
+        totalGames: total,
+        winRate,
+        streak: data.streak || 0,
+        bestStreak: data.bestStreak || 0
+      };
+    });
+
+    list.sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+      return b.totalGames - a.totalGames;
+    });
+
+    return list.slice(0, 5);
+  }
+
+  function loadLocalLeaderboard() {
+    try {
+      const cached = localStorage.getItem('wp_leaderboard');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    const map = getLocalPlayersMap();
+    const top5 = getTop5FromMap(map);
+    try { localStorage.setItem('wp_leaderboard', JSON.stringify(top5)); } catch (e) {}
+    return top5;
+  }
+
+  function recordGameResultLocally(winnerName, loserName) {
+    if (!winnerName || !loserName || winnerName === loserName || winnerName === 'Draw') return;
+    const map = getLocalPlayersMap();
+    const now = Date.now();
+
+    // Winner
+    if (!map[winnerName]) {
+      map[winnerName] = { wins: 0, losses: 0, totalGames: 0, streak: 0, bestStreak: 0, lastPlayed: now };
+    }
+    map[winnerName].wins = (map[winnerName].wins || 0) + 1;
+    map[winnerName].totalGames = (map[winnerName].totalGames || 0) + 1;
+    map[winnerName].streak = (map[winnerName].streak || 0) + 1;
+    map[winnerName].bestStreak = Math.max(map[winnerName].bestStreak || 0, map[winnerName].streak);
+    map[winnerName].lastPlayed = now;
+
+    // Loser
+    if (!map[loserName]) {
+      map[loserName] = { wins: 0, losses: 0, totalGames: 0, streak: 0, bestStreak: 0, lastPlayed: now };
+    }
+    map[loserName].losses = (map[loserName].losses || 0) + 1;
+    map[loserName].totalGames = (map[loserName].totalGames || 0) + 1;
+    map[loserName].streak = 0;
+    map[loserName].lastPlayed = now;
+
+    try { localStorage.setItem('wp_players_map', JSON.stringify(map)); } catch (e) {}
+
+    const top5 = getTop5FromMap(map);
+    try { localStorage.setItem('wp_leaderboard', JSON.stringify(top5)); } catch (e) {}
+    renderLeaderboard(top5);
+
+    if (socket && socket.connected) {
+      socket.emit('record_game_result', { winnerName, loserName });
+    }
+  }
+
+  function mergeServerLeaderboard(serverTop5) {
+    if (!serverTop5 || !Array.isArray(serverTop5) || serverTop5.length === 0) return;
+    const map = getLocalPlayersMap();
+    serverTop5.forEach(sp => {
+      if (!map[sp.name]) {
+        map[sp.name] = {
+          wins: sp.wins,
+          losses: sp.losses,
+          totalGames: sp.totalGames,
+          streak: sp.streak,
+          bestStreak: sp.bestStreak,
+          lastPlayed: Date.now()
+        };
+      } else {
+        const cur = map[sp.name];
+        cur.wins = Math.max(cur.wins || 0, sp.wins);
+        cur.losses = Math.max(cur.losses || 0, sp.losses);
+        cur.totalGames = Math.max(cur.totalGames || 0, cur.wins + cur.losses);
+        cur.streak = Math.max(cur.streak || 0, sp.streak || 0);
+        cur.bestStreak = Math.max(cur.bestStreak || 0, sp.bestStreak || 0);
+      }
+    });
+    try { localStorage.setItem('wp_players_map', JSON.stringify(map)); } catch (e) {}
+    const top5 = getTop5FromMap(map);
+    try { localStorage.setItem('wp_leaderboard', JSON.stringify(top5)); } catch (e) {}
+    renderLeaderboard(top5);
+  }
+
   function updateCareerBadge(top5) {
     if (!careerRecord) return;
     const myName = getPlayerName();
-    let found = null;
-    if (top5 && top5.length) {
-      found = top5.find(p => p.name.toLowerCase() === myName.toLowerCase());
-    }
-    if (found) {
-      careerRecord.textContent = `${found.wins}W - ${found.losses}L (${found.winRate}%)`;
+    const map = getLocalPlayersMap();
+    const myPlayer = map[myName];
+    if (myPlayer) {
+      const wins = myPlayer.wins || 0;
+      const losses = myPlayer.losses || 0;
+      const total = wins + losses;
+      const wr = total > 0 ? Math.round((wins / total) * 100) : 0;
+      careerRecord.textContent = `${wins}W - ${losses}L${total > 0 ? ` (${wr}%)` : ''}`;
     } else {
       let localWins = 0;
       let localLosses = 0;
@@ -139,7 +273,8 @@ function initApp() {
 
   function renderLeaderboard(top5) {
     if (!leaderboardBody) return;
-    if (!top5 || !top5.length) {
+    const board = (top5 && top5.length) ? top5 : loadLocalLeaderboard();
+    if (!board || !board.length) {
       leaderboardBody.innerHTML = '<tr><td colspan="5" class="empty-leaderboard">Awaiting combat records...</td></tr>';
       updateCareerBadge([]);
       return;
@@ -147,7 +282,7 @@ function initApp() {
 
     const rankIcons = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
     let html = '';
-    top5.forEach((p, idx) => {
+    board.forEach((p, idx) => {
       const isChampion = idx === 0 && p.wins > 0;
       const rankLabel = rankIcons[idx] || `${idx + 1}`;
       const nameDisplay = isChampion ? `👑 ${escapeHtml(p.name)}` : escapeHtml(p.name);
@@ -164,7 +299,7 @@ function initApp() {
       `;
     });
     leaderboardBody.innerHTML = html;
-    updateCareerBadge(top5);
+    updateCareerBadge(board);
   }
 
   function renderH2HBanner(p1, p2, h2h, bannerEl, textEl) {
@@ -284,7 +419,14 @@ function initApp() {
       try { localStorage.setItem('brick_clash_name', inputPlayerName.value.trim()); } catch (e) {}
       updateCareerBadge(null);
     });
+    inputPlayerName.addEventListener('input', () => {
+      try { localStorage.setItem('brick_clash_name', inputPlayerName.value.trim()); } catch (e) {}
+      updateCareerBadge(null);
+    });
+    renderLeaderboard(loadLocalLeaderboard());
     updateCareerBadge(null);
+  } else {
+    renderLeaderboard(loadLocalLeaderboard());
   }
 
   function getPlayerName() {
@@ -512,11 +654,11 @@ function initApp() {
 
       // Leaderboard Data
       socket.on('leaderboard_data', ({ top5 }) => {
-        renderLeaderboard(top5);
+        mergeServerLeaderboard(top5);
       });
 
       socket.on('leaderboard_update', ({ top5 }) => {
-        renderLeaderboard(top5);
+        mergeServerLeaderboard(top5);
       });
 
       // Head-to-Head (H2H) Matchup Series Data
@@ -752,13 +894,15 @@ function initApp() {
       gameoverH2hBanner.classList.add('hidden');
     }
 
-    // Render updated leaderboard if present
-    if (summary.leaderboard) {
-      renderLeaderboard(summary.leaderboard);
-    }
-
-    // Save local career stats
+    // Save local career stats and update persistent leaderboard
     if (!isDraw) {
+      const myName = getPlayerName();
+      const oppName = isSoloMode ? 'Cyber Bot (AI)' : (mySlot === 'p1' ? (playerNames.p2 || 'Player 2') : (playerNames.p1 || 'Player 1'));
+      const winner = isWinner ? myName : oppName;
+      const loser = isWinner ? oppName : myName;
+
+      recordGameResultLocally(winner, loser);
+
       try {
         if (isWinner) {
           const w = parseInt(localStorage.getItem('wp_career_wins') || '0', 10) + 1;
@@ -767,8 +911,9 @@ function initApp() {
           const l = parseInt(localStorage.getItem('wp_career_losses') || '0', 10) + 1;
           localStorage.setItem('wp_career_losses', l);
         }
-        updateCareerBadge(summary.leaderboard || null);
       } catch (e) {}
+    } else if (summary.leaderboard) {
+      mergeServerLeaderboard(summary.leaderboard);
     }
 
     rematchBtnText.textContent = 'VOTE REMATCH';
